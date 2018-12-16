@@ -1,28 +1,36 @@
 "use strict";
 
-var width = 960,
+let width = 960,
     height = 500;
 const defaultRotationLongitude = -180;
 
 let previousScale = 1;
 
-var projection = d3.geo.equirectangular() //mercator()
+let projection = d3.geo.equirectangular() //mercator()
     .center([0, 5 ])
     .scale(150)
-    .rotate([defaultRotationLongitude, 0, 0]);
+    .rotate([0, 0, 0]);
 
-var svg = d3.select("#map-holder").append("svg")
+const svg = d3.select("#map-holder").append("svg")
     .attr("width", width)
-    .attr("height", height);
-var g = svg.append("g");
+    .attr("height", height)
+    .attr("style", 'border-style: solid');
+const g = svg.append("g");
 
-var path = d3.geo.path()
+// path on jonkinlainen objekti joka generoi polun koordinaatit svg:n d-attribuutille sopivaksi.
+// projection (joka annetaan argumenttina tässä) on funktio, joka muuttaa koordinaatit [x, y]
+// projektion mukaisiksi.
+const path = d3.geo.path()
     .projection(projection);
 
-var countryNames;
+let countryNames;
 d3.tsv("world-country-names.tsv", function(data){
     countryNames = data;
 });
+
+const circleData = [{lon: 0, lat: 0}, {lon: 10, lat: 20}];
+
+initialize();
 
 // load and display the World
 d3.json("world-110m.json", function(error, topology) {
@@ -47,30 +55,41 @@ d3.json("world-110m.json", function(error, topology) {
             .style("fill", "red");
     });*/
 
-
-    /*console.assert(topojson.feature !== undefined);
-    console.assert(topology !== undefined);
-    console.assert(topology.objects !== undefined);
-    console.assert(topology.objects.countries !== undefined);
-    console.assert(topojson.feature(topology, topology.objects.countries) !== undefined);
-    console.assert(topojson.feature(topology, topology.objects.countries).features !== undefined);*/
-
+    const pathDataArray = topojson.feature(topology, topology.objects.countries).features
+        // add other stuff to the data in addition to topjson features
+        .map(function(element){
+            element.isCountry = true;
+            return element;
+        }); // Each element of the array will be datum of an D3/DOM element.
+    console.log("pathDataArray:", pathDataArray);
     g.selectAll("path")
         //.data(topojson.object(topology, topology.objects.countries)
-        .data(topojson.feature(topology, topology.objects.countries)
-            .features)
+        .data(pathDataArray)
         .enter()
         .append("path")
         .attr("d", path)
         .attr("fill", "black")
         .attr("stroke", "red")
         .attr("stroke-width", "1")
+        .datum("")
         .on("click", handleCountryClick);
 
     var countries = topojson.feature(topology, topology.objects.countries).features;
-    console.log("countries:", countries);
+    //console.log("countries:", countries);
 
-    g.selectAll("path")
+    //g.selectAll("path") Mikä tämä on?
+    g.selectAll("circle")
+        .data(circleData)
+        .enter()
+        .append("circle")
+        .attr("cx", function(d) {
+            return projection([d.lon, d.lat])[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d.lon, d.lat])[1];
+        })
+        .attr("r", 10)
+        .style("fill", "green");
 });
 
 function handleCountryClick(d, i){
@@ -81,11 +100,10 @@ function handleCountryClick(d, i){
     //console.log("index:", i);
 }
 
-
-
 // zoom and pan
 var zoom = d3.behavior.zoom()
     .on("zoom",function() {
+        console.log("zooming");
         /*const newScale = d3.event.scale;
         const zoomed = newScale !== previousScale;
         console.log("zoomed:", zoomed);
@@ -102,54 +120,52 @@ var zoom = d3.behavior.zoom()
 
         }
         previousScale = newScale;*/
-        /*
-        Kun pannataan sivulle, rotate.
-        Kun zoomataan, scale.
-         */
         const newScale = d3.event.scale;
         const yTranslation = d3.event.translate[1];
         const currentRotation = projection.rotate();
         const longitudeAmount = (d3.event.translate[0] / (width * newScale)) * 360;
         projection.scale(newScale * 150);
         const latitudeAmount = (d3.event.translate[1] / (height * newScale)) * 180;
-        console.log(latitudeAmount + 5);
+        //console.log(latitudeAmount + 5);
         projection.center([0, latitudeAmount + 5]);
         projection = projection.rotate(
             [longitudeAmount + defaultRotationLongitude, currentRotation[1], currentRotation[2]]);
 
         // FYI: d3.event.translate on zoom-objectin arvo.
-        console.log("translation1:", d3.event.translate, "scale:", d3.event.scale);
-        //console.log("center:", projection.center());
-        //console.log("rotation1", currentRotation);
-        //console.log("translation1:", d3.event.translate, "new scale:", newScale);
-        //console.log("longitude amount:", longitudeAmount);
-        //console.log("new rotation:", projection.rotate());
-        //console.log("translate2:", d3.event.translate);
-
-        /*
-        Kun pannataan, pannautuu ylös ja alas normaalisti.
-        Sen sijaan sivuille ei pannaudu, vaan siirretään muuttamalla projection.rotate-arvoa.
-        eli sen pituuspiiriä
-        Eli pitää olla funktio, jolle kun annetaan translation vector,
-        niin muuttaa sen pituuspiirimuutokseksi
-        pituuspiirejä on 360, ja se vastaa koko leveyttä (vai onko tyhjyyttä?)
-        (x / leveydellä) * 360 == pituuspiirit
-         */
-
-        /*
-        * Zoomatessa ignoorataan leveyspiirijuttu.
-        */
+        //console.log("translation1:", d3.event.translate, "scale:", d3.event.scale);
 
         g.selectAll("circle")
-            .attr("d", path.projection(projection));
+            .attr("cx", function(d) {
+            return projection([d.lon, d.lat])[0];
+            })
+            .attr("cy", function(d) {
+                return projection([d.lon, d.lat])[1];
+            });
+        // Nämä kaksi riviä on kopioitu jostakin, mutta niissä ei vaikuta olevan mitään järkeä?:
+        //g.selectAll("circle")
+        //    .attr("d", path.projection(projection));
+        // path.projection palauttaa funktion. Joten miten sen voi asettaa HTML-elementin
+        // attribuutin arvoksi????????
         g.selectAll("path")
             .attr("d", path.projection(projection));
+        console.log("projected");
         // Compensate for stroke width change which is caused by zoom, so that the width remains constant.
         //g.selectAll("path")
         //    .attr("stroke-width", calculateNewStrokeWidth(d3.event.scale, 1));
 
+        /*let selection = g.selectAll("circle").data(circleData);
+        selection.enter()
+            .append("circle")
+            .attr("cx", function(d) {
+                return projection([d.lon + 100, d.lat + 100])[0];
+            })
+            .attr("cy", function(d) {
+                return projection([d.lon + 100, d.lat + 100])[1];
+            })
+            .attr("r", 10)
+            .style("fill", "green");*/
     })
-    .scaleExtent([1, 3]);
+    .scaleExtent([1, 10]);
 
 svg.call(zoom);
 
@@ -166,6 +182,23 @@ function getCountryNameById(idNumber){
     const name = countryEntry.name;
     console.assert(name !== undefined);
     return name;
+}
+
+function initialize(){
+    document.addEventListener("click", function(event){
+        const target = event.target;
+        console.log("event target:");
+        console.log(target);
+        const datum = d3.select(target).datum();
+        if(datum !== undefined) {
+            if(datum.isCountry) {
+                const countryId = datum.id;
+                const countryName = getCountryNameById(countryId);
+                console.log("datum:", datum);
+                console.log("countryName:", countryName);
+            }
+        }
+    });
 }
 //d3.selectAll()
 
