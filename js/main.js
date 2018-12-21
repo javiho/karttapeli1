@@ -71,7 +71,6 @@ d3.json("world-110m.json", function(error, topology) {
         .attr("fill", "black")
         .attr("stroke", "red")
         .attr("stroke-width", "1")
-        .datum("")
         .on("click", handleCountryClick);
 
     var countries = topojson.feature(topology, topology.objects.countries).features;
@@ -103,7 +102,6 @@ function handleCountryClick(d, i){
 // zoom and pan
 var zoom = d3.behavior.zoom()
     .on("zoom",function() {
-        console.log("zooming");
         /*const newScale = d3.event.scale;
         const zoomed = newScale !== previousScale;
         console.log("zoomed:", zoomed);
@@ -148,7 +146,6 @@ var zoom = d3.behavior.zoom()
         // attribuutin arvoksi????????
         g.selectAll("path")
             .attr("d", path.projection(projection));
-        console.log("projected");
         // Compensate for stroke width change which is caused by zoom, so that the width remains constant.
         //g.selectAll("path")
         //    .attr("stroke-width", calculateNewStrokeWidth(d3.event.scale, 1));
