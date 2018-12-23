@@ -9,7 +9,7 @@ let previousScale = 1;
 let projection = d3.geo.equirectangular() //mercator()
     .center([0, 5 ])
     .scale(150)
-    .rotate([0, 0, 0]);
+    .rotate([defaultRotationLongitude, 0, 0]);
 
 const svg = d3.select("#map-holder").append("svg")
     .attr("width", width)
@@ -23,12 +23,15 @@ const g = svg.append("g");
 const path = d3.geo.path()
     .projection(projection);
 
-let countryNames;
-d3.tsv("world-country-names.tsv", function(data){
-    countryNames = data;
-});
+/*
+    Lista seuraavanlaisia objecteja: maan nimi, sentroidipituus- ja leveys, maan id.
+ */
+let countryData = [];
+let countryNames = null;
+let centroidData = null;
 
 const circleData = [{lon: 0, lat: 0}, {lon: 10, lat: 20}];
+const centroidFill = "rgba(255, 128, 0, 1)";
 
 initialize();
 
@@ -60,7 +63,8 @@ d3.json("world-110m.json", function(error, topology) {
         .map(function(element){
             element.isCountry = true;
             return element;
-        }); // Each element of the array will be datum of an D3/DOM element.
+        });// Each element of the array will be datum of an D3/DOM element.
+
     console.log("pathDataArray:", pathDataArray);
     g.selectAll("path")
         //.data(topojson.object(topology, topology.objects.countries)
@@ -73,14 +77,80 @@ d3.json("world-110m.json", function(error, topology) {
         .attr("stroke-width", "1")
         .on("click", handleCountryClick);
 
+    // TODO: mihin tätä käytetään?
     var countries = topojson.feature(topology, topology.objects.countries).features;
     //console.log("countries:", countries);
 
-    //g.selectAll("path") Mikä tämä on?
-    g.selectAll("circle")
+    d3.tsv("world-country-names.tsv", function(data){
+        countryNames = data;
+        //console.log("country names:", countryNames);
+        initializeCountryData(topology);
+
+        //console.log("centroid data:", centroidData);
+        createCentroidCircles();
+
+        //g.selectAll("path") Mikä tämä on?
+        createToppingCircles();
+    });
+});
+
+function initializeCountryData(topology){
+    centroidData = topojson.feature(topology, topology.objects.countries).features
+        .map(function(element){
+            // return path.centroid(element); // "computes the projected centroid on the Cartesian plane"
+            return d3.geo.centroid(element); // "Returns the spherical centroid"
+        });
+    for(let i = 0; i < countryNames.length; i++){
+        const newCountryEntry = {};
+        newCountryEntry.name = countryNames[i].name;
+        newCountryEntry.centroid = centroidData[i];
+        newCountryEntry.id = countryNames[i].id;
+        countryData.push(newCountryEntry);
+    }
+    //console.log(countryData);
+}
+
+function createCentroidCircles(){
+    g.selectAll(".centroid")
+        .data(centroidData)
+        .enter()
+        .append("circle")
+        .attr("class", "centroid")
+        .attr("cx", function(d) {
+            //console.log(d);
+            return projection([d[0], d[1]])[0];
+            //return d[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d[0], d[1]])[1];
+            //return d[1];
+        })
+        .attr("r", 5)
+        .attr("fill", centroidFill);
+}
+
+function updateCentroidCircles(){
+    g.selectAll(".centroid")
+        .data(centroidData)
+        .attr("cx", function(d) {
+            //console.log(d);
+            return projection([d[0], d[1]])[0];
+            //return d[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d[0], d[1]])[1];
+            //return d[1];
+        })
+        .attr("r", 5)
+        .attr("fill", centroidFill);
+}
+
+function createToppingCircles(){
+    g.selectAll(".topping-circle")
         .data(circleData)
         .enter()
         .append("circle")
+        .attr("class", "topping-circle")
         .attr("cx", function(d) {
             return projection([d.lon, d.lat])[0];
         })
@@ -89,7 +159,17 @@ d3.json("world-110m.json", function(error, topology) {
         })
         .attr("r", 10)
         .style("fill", "green");
-});
+}
+
+function updateToppingCircles(){
+    g.selectAll(".topping-circle")
+        .attr("cx", function(d) {
+            return projection([d.lon, d.lat])[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d.lon, d.lat])[1];
+        });
+}
 
 function handleCountryClick(d, i){
     const countryName = getCountryNameById(d.id);
@@ -132,13 +212,9 @@ var zoom = d3.behavior.zoom()
         // FYI: d3.event.translate on zoom-objectin arvo.
         //console.log("translation1:", d3.event.translate, "scale:", d3.event.scale);
 
-        g.selectAll("circle")
-            .attr("cx", function(d) {
-            return projection([d.lon, d.lat])[0];
-            })
-            .attr("cy", function(d) {
-                return projection([d.lon, d.lat])[1];
-            });
+        updateToppingCircles();
+        updateCentroidCircles();
+
         // Nämä kaksi riviä on kopioitu jostakin, mutta niissä ei vaikuta olevan mitään järkeä?:
         //g.selectAll("circle")
         //    .attr("d", path.projection(projection));
@@ -179,6 +255,10 @@ function getCountryNameById(idNumber){
     const name = countryEntry.name;
     console.assert(name !== undefined);
     return name;
+}
+
+function addCircleToArea(pathD3){
+    const newCircleCenter = pathD3.centroid()
 }
 
 function initialize(){
