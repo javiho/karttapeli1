@@ -83,11 +83,12 @@ d3.json("world-110m.json", function(error, topology) {
 
     d3.tsv("world-country-names.tsv", function(data){
         countryNames = data;
-        //console.log("country names:", countryNames);
-        initializeCountryData(topology);
+        console.log("country names:", countryNames);
+        initializeCountryData(pathDataArray);
 
         //console.log("centroid data:", centroidData);
-        createCentroidCircles();
+        //createCentroidCircles();
+        updateCentroidCircles2();
 
         //g.selectAll("path") Mikä tämä on?
         createToppingCircles();
@@ -95,22 +96,61 @@ d3.json("world-110m.json", function(error, topology) {
 });
 
 function initializeCountryData(topology){
-    centroidData = topojson.feature(topology, topology.objects.countries).features
+    //centroidData = topojson.feature(topology, topology.objects.countries).features
+    centroidData = topology
         .map(function(element){
             // return path.centroid(element); // "computes the projected centroid on the Cartesian plane"
+            console.assert(d3.geo.centroid(element) !== undefined);
             return d3.geo.centroid(element); // "Returns the spherical centroid"
         });
+    // TODO: 252 maan nimeä, mutta 177 topologiahommelia!
+    for(let i = 0; i < topology.length; i++){
+        // topology was in same order and of same length as centroid data.
+        const featureEntry = topology[i];
+        const centroid = centroidData[i];
+        const featureIdNumber = parseInt(featureEntry.id);
+        if(featureIdNumber === -99){
+            console.log("was -99");
+            continue;
+        }
+        const countryName = getCountryNameById(featureIdNumber);
+        const newCountryEntry = {};
+        newCountryEntry.name = countryName;
+        newCountryEntry.centroid = centroid;
+        newCountryEntry.id = featureIdNumber;
+        countryData.push(newCountryEntry);
+    }
+    /*
     for(let i = 0; i < countryNames.length; i++){
         const newCountryEntry = {};
         newCountryEntry.name = countryNames[i].name;
         newCountryEntry.centroid = centroidData[i];
-        newCountryEntry.id = countryNames[i].id;
+        newCountryEntry.id = parseInt(countryNames[i].id);
         countryData.push(newCountryEntry);
-    }
-    //console.log(countryData);
+    }*/
+    console.log("countryData:", countryData);
 }
 
-function createCentroidCircles(){
+function updateCentroidCircles2(){
+    let selection = g.selectAll(".centroid").data(centroidData);
+    selection.enter()
+        .append("circle")
+        .attr("class", "centroid")
+        .attr("r", 5)
+        .attr("fill", centroidFill);
+    selection
+        .attr("cx", function(d) {
+            //console.log(d);
+            return projection([d[0], d[1]])[0];
+            //return d[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d[0], d[1]])[1];
+            //return d[1];
+        })
+}
+
+/*function createCentroidCircles(){
     g.selectAll(".centroid")
         .data(centroidData)
         .enter()
@@ -127,9 +167,9 @@ function createCentroidCircles(){
         })
         .attr("r", 5)
         .attr("fill", centroidFill);
-}
+}*/
 
-function updateCentroidCircles(){
+/*function updateCentroidCircles(){
     g.selectAll(".centroid")
         .data(centroidData)
         .attr("cx", function(d) {
@@ -143,7 +183,7 @@ function updateCentroidCircles(){
         })
         .attr("r", 5)
         .attr("fill", centroidFill);
-}
+}*/
 
 function createToppingCircles(){
     g.selectAll(".topping-circle")
@@ -161,7 +201,7 @@ function createToppingCircles(){
         .style("fill", "green");
 }
 
-function updateToppingCircles(){
+/*function updateToppingCircles(){
     g.selectAll(".topping-circle")
         .attr("cx", function(d) {
             return projection([d.lon, d.lat])[0];
@@ -169,11 +209,41 @@ function updateToppingCircles(){
         .attr("cy", function(d) {
             return projection([d.lon, d.lat])[1];
         });
+}*/
+
+function updateToppingCircles2(){
+    let selection = g.selectAll(".topping-circle").data(circleData);
+    selection.enter()
+        .append("circle")
+        .attr("class", "topping-circle")
+        .style("fill", "green")
+        .attr("r", 10);
+
+    selection.attr("cx", function(d) {
+        //console.log("d:", d);
+        return projection([d.lon, d.lat])[0];
+    })
+    .attr("cy", function(d) {
+        return projection([d.lon, d.lat])[1];
+    });
+    /*g.selectAll(".topping-circle")
+        .data(circleData)
+        .enter()
+        .append("circle")
+        .attr("class", "topping-circle")
+        .attr("cx", function(d) {
+            return projection([d.lon, d.lat])[0];
+        })
+        .attr("cy", function(d) {
+            return projection([d.lon, d.lat])[1];
+        })
+        .attr("r", 10)
+        .style("fill", "green");*/
 }
 
 function handleCountryClick(d, i){
     const countryName = getCountryNameById(d.id);
-    console.log(countryName);
+    console.log("clicked:", countryName, "id:", d.id);
     //alert(countryName + "Click'd!");
     //console.log("datum:", d);
     //console.log("index:", i);
@@ -212,8 +282,8 @@ var zoom = d3.behavior.zoom()
         // FYI: d3.event.translate on zoom-objectin arvo.
         //console.log("translation1:", d3.event.translate, "scale:", d3.event.scale);
 
-        updateToppingCircles();
-        updateCentroidCircles();
+        updateToppingCircles2();
+        updateCentroidCircles2();
 
         // Nämä kaksi riviä on kopioitu jostakin, mutta niissä ei vaikuta olevan mitään järkeä?:
         //g.selectAll("circle")
@@ -242,6 +312,31 @@ var zoom = d3.behavior.zoom()
 
 svg.call(zoom);
 
+/*
+    Pre-condition: countryId is a valid country id.
+ */
+function addToken(countryId){
+    /*
+    ota maa
+    ota sentroidi
+    pistäpä pokaa sinne circkle dataan uusi taulukko
+    oop dateee
+     */
+    const countryEntry = countryData.find(function(element){
+        return element.id === countryId;
+    });
+    if(countryEntry === undefined){
+        console.log("countryEntry is undefined");
+        return;
+    }
+    const centroid = countryEntry.centroid;
+    //console.log("centroid:", centroid);
+    const lon = centroid[0];
+    const lat = centroid[1];
+    circleData.push({lon: lon, lat: lat});
+    updateToppingCircles2();
+}
+
 function calculateNewStrokeWidth(scale, normalWidth){
     return (normalWidth / scale).toString();
 }
@@ -252,6 +347,9 @@ function calculateNewStrokeWidth(scale, normalWidth){
 function getCountryNameById(idNumber){
     //const idNumber = parseInt(idString);
     const countryEntry = countryNames.find( entry => parseInt(entry.id) === idNumber );
+    if(countryEntry === undefined){
+        console.log("getCountryNameById: idNumber:", idNumber);
+    }
     const name = countryEntry.name;
     console.assert(name !== undefined);
     return name;
@@ -273,6 +371,7 @@ function initialize(){
                 const countryName = getCountryNameById(countryId);
                 console.log("datum:", datum);
                 console.log("countryName:", countryName);
+                addToken(countryId);
             }
         }
     });
