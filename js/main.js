@@ -150,41 +150,6 @@ function updateCentroidCircles2(){
         })
 }
 
-/*function createCentroidCircles(){
-    g.selectAll(".centroid")
-        .data(centroidData)
-        .enter()
-        .append("circle")
-        .attr("class", "centroid")
-        .attr("cx", function(d) {
-            //console.log(d);
-            return projection([d[0], d[1]])[0];
-            //return d[0];
-        })
-        .attr("cy", function(d) {
-            return projection([d[0], d[1]])[1];
-            //return d[1];
-        })
-        .attr("r", 5)
-        .attr("fill", centroidFill);
-}*/
-
-/*function updateCentroidCircles(){
-    g.selectAll(".centroid")
-        .data(centroidData)
-        .attr("cx", function(d) {
-            //console.log(d);
-            return projection([d[0], d[1]])[0];
-            //return d[0];
-        })
-        .attr("cy", function(d) {
-            return projection([d[0], d[1]])[1];
-            //return d[1];
-        })
-        .attr("r", 5)
-        .attr("fill", centroidFill);
-}*/
-
 function createToppingCircles(){
     g.selectAll(".topping-circle")
         .data(circleData)
@@ -200,16 +165,6 @@ function createToppingCircles(){
         .attr("r", 10)
         .style("fill", "green");
 }
-
-/*function updateToppingCircles(){
-    g.selectAll(".topping-circle")
-        .attr("cx", function(d) {
-            return projection([d.lon, d.lat])[0];
-        })
-        .attr("cy", function(d) {
-            return projection([d.lon, d.lat])[1];
-        });
-}*/
 
 function updateToppingCircles2(){
     let selection = g.selectAll(".topping-circle").data(circleData);
@@ -316,12 +271,6 @@ svg.call(zoom);
     Pre-condition: countryId is a valid country id.
  */
 function addToken(countryId){
-    /*
-    ota maa
-    ota sentroidi
-    pistäpä pokaa sinne circkle dataan uusi taulukko
-    oop dateee
-     */
     const countryEntry = countryData.find(function(element){
         return element.id === countryId;
     });
@@ -329,6 +278,8 @@ function addToken(countryId){
         console.log("countryEntry is undefined");
         return;
     }
+    tokenService.addToken(countryEntry.id);
+    console.log("all tokens:", tokenService.tokens);
     const centroid = countryEntry.centroid;
     //console.log("centroid:", centroid);
     const lon = centroid[0];
