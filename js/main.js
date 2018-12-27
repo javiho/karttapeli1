@@ -30,7 +30,11 @@ let countryData = [];
 let countryNames = null;
 let centroidData = null;
 
-const circleData = [{lon: 0, lat: 0}, {lon: 10, lat: 20}];
+// TODO: tämä pitäisi hommata modelista niin, että otetaan sijaintimaa.sentroidi
+// TODO: kun tarvitaan tokeneiden koordinaatit, voisi ottaa ne TS:stä functiolla
+// Lista seuraavanlaisia objekteja: malli-token-objekti, countryData entry
+let tokenData = [];
+//const circleData = null; // [{lon: 0, lat: 0}, {lon: 10, lat: 20}];
 const centroidFill = "rgba(255, 128, 0, 1)";
 
 initialize();
@@ -91,7 +95,8 @@ d3.json("world-110m.json", function(error, topology) {
         updateCentroidCircles2();
 
         //g.selectAll("path") Mikä tämä on?
-        createToppingCircles();
+        //createToppingCircles();
+        updateToppingCircles2();
     });
 });
 
@@ -131,6 +136,35 @@ function initializeCountryData(topology){
     console.log("countryData:", countryData);
 }
 
+function updateTokenData(){
+    let newTokenData = [];
+    tokenService.tokens.forEach(function(element){
+        const tokenModel = element;
+
+        const countryId = element.location;
+        const countryPresentation = getCountryEntryById(countryId);
+        console.assert(countryPresentation !== undefined);
+        const newTokenPresentation = {
+            token: tokenModel,
+            countryPresentation: countryPresentation
+        };
+        newTokenData.push(newTokenPresentation);
+    });
+    tokenData = newTokenData;
+}
+
+function updateToppingCircleData(){
+    // TODO
+    /*
+    ota tokenit
+    ota niiden maa-id:t
+    ota niiden sentroidit
+     */
+    const countryIds = tokenService.tokens.map(function(element){
+        element.location;
+    });
+}
+
 function updateCentroidCircles2(){
     let selection = g.selectAll(".centroid").data(centroidData);
     selection.enter()
@@ -150,24 +184,62 @@ function updateCentroidCircles2(){
         })
 }
 
+/*
 function createToppingCircles(){
     g.selectAll(".topping-circle")
-        .data(circleData)
+        .data(tokenData)
         .enter()
         .append("circle")
         .attr("class", "topping-circle")
         .attr("cx", function(d) {
-            return projection([d.lon, d.lat])[0];
+            const centroid = d.countryPresentation.centroid;
+            return projection( [centroid[0], centroid[1]] )[0];
         })
         .attr("cy", function(d) {
-            return projection([d.lon, d.lat])[1];
+            const centroid = d.countryPresentation.centroid;
+            return projection( [centroid[0], centroid[1]] )[1];
         })
         .attr("r", 10)
+        .attr("data-token-id", d.token.id)
         .style("fill", "green");
-}
+    // g.selectAll(".topping-circle")
+    //     .data(circleData)
+    //     .enter()
+    //     .append("circle")
+    //     .attr("class", "topping-circle")
+    //     .attr("cx", function(d) {
+    //         return projection([d.lon, d.lat])[0];
+    //     })
+    //     .attr("cy", function(d) {
+    //         return projection([d.lon, d.lat])[1];
+    //     })
+    //     .attr("r", 10)
+    //     .style("fill", "green");
+}*/
 
 function updateToppingCircles2(){
-    let selection = g.selectAll(".topping-circle").data(circleData);
+    updateTokenData();
+    let selection = g.selectAll(".topping-circle").data(tokenData);
+    selection.enter()
+        .append("circle")
+        .attr("class", "topping-circle")
+        .attr("data-token-id", function(d){
+            return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
+        })
+        .style("fill", "green")
+        .attr("r", 10);
+
+    selection
+        .attr("cx", function(d) {
+            //console.log("d:", d);
+            const centroid = d.countryPresentation.centroid;
+            return projection([centroid[0], centroid[1]])[0];
+        })
+        .attr("cy", function(d) {
+            const centroid = d.countryPresentation.centroid;
+            return projection([centroid[0], centroid[1]])[1];
+        });
+    /*let selection = g.selectAll(".topping-circle").data(circleData);
     selection.enter()
         .append("circle")
         .attr("class", "topping-circle")
@@ -180,7 +252,8 @@ function updateToppingCircles2(){
     })
     .attr("cy", function(d) {
         return projection([d.lon, d.lat])[1];
-    });
+    });*/
+
     /*g.selectAll(".topping-circle")
         .data(circleData)
         .enter()
@@ -268,23 +341,31 @@ var zoom = d3.behavior.zoom()
 svg.call(zoom);
 
 /*
-    Pre-condition: countryId is a valid country id.
+    Gets country entry from countryData by country id, or undefined if it doesn't exist.
  */
-function addToken(countryId){
+function getCountryEntryById(countryId){
     const countryEntry = countryData.find(function(element){
         return element.id === countryId;
     });
+    return countryEntry;
+}
+
+/*
+    Pre-condition: countryId is a valid country id.
+ */
+function addToken(countryId){
+    const countryEntry = getCountryEntryById(countryId);
     if(countryEntry === undefined){
         console.log("countryEntry is undefined");
         return;
     }
     tokenService.addToken(countryEntry.id);
     console.log("all tokens:", tokenService.tokens);
-    const centroid = countryEntry.centroid;
+    //const centroid = countryEntry.centroid;
     //console.log("centroid:", centroid);
-    const lon = centroid[0];
-    const lat = centroid[1];
-    circleData.push({lon: lon, lat: lat});
+    //const lon = centroid[0];
+    //const lat = centroid[1];
+    //circleData.push({lon: lon, lat: lat});
     updateToppingCircles2();
 }
 
