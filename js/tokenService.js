@@ -24,7 +24,7 @@ const tokenService = {};
     c._createToken = function(countryId){
         console.assert(countryId !== undefined);
         return {
-            tokenId: c._generateUniqueId(), // string
+            id: c._generateUniqueId(), // string
             location: countryId
         };
     };

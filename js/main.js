@@ -32,6 +32,7 @@ let centroidData = null;
 // TODO: kun tarvitaan tokeneiden koordinaatit, voisi ottaa ne TS:stä functiolla
 // Lista seuraavanlaisia objekteja: { malli-token-objekti, countryData entry }
 let tokenData = [];
+let selectedTokens = [];
 const centroidFill = "rgba(255, 128, 0, 1)";
 
 initialize();
@@ -140,7 +141,8 @@ function updateTokenData(){
         console.assert(countryPresentation !== undefined);
         const newTokenPresentation = {
             token: tokenModel,
-            countryPresentation: countryPresentation
+            countryPresentation: countryPresentation,
+            isToken: true
         };
         newTokenData.push(newTokenPresentation);
     });
@@ -173,8 +175,11 @@ function updateToppingCircles2(){
             return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
         })
         .style("fill", "green")
-        .attr("r", 10);
+        .attr("r", 10)
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "5,5");
 
+    console.log("selected tokens:", selectedTokens);
     selection
         .attr("cx", function(d) {
             //console.log("d:", d);
@@ -184,6 +189,20 @@ function updateToppingCircles2(){
         .attr("cy", function(d) {
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[1];
+        })
+        .attr("stroke", function(d){
+            const contains = selectedTokens.find(function(element){
+                //console.log("d:", d.token.id);
+                //console.log("element:", element.token.id);
+                //console.log("equals:", d.token.id === element.token.id);
+                return element.token.id === d.token.id;
+            });
+            if(!contains){
+                //console.log("wasn't found in selected elements");
+                return ""; // No stroke.
+            }else{
+                return "red";
+            }
         });
 }
 
@@ -242,19 +261,37 @@ function addCircleToArea(pathD3){
 }
 
 function initialize(){
-    document.addEventListener("click", function(event){
-        const target = event.target;
-        console.log("event target:");
-        console.log(target);
-        const datum = d3.select(target).datum();
-        if(datum !== undefined) {
-            if(datum.isCountry) {
-                const countryId = datum.id;
-                const countryName = getCountryNameById(countryId);
-                console.log("datum:", datum);
-                console.log("countryName:", countryName);
-                addToken(countryId);
+    document.addEventListener("click", universalClickHandler);
+}
+
+function universalClickHandler(event){
+    const target = event.target;
+    console.log("event target:");
+    console.log(target);
+    const targetD3 = d3.select(target);
+    const datum = targetD3.datum();
+    if(datum !== undefined) {
+        if(datum.isCountry) {
+            const countryId = datum.id;
+            const countryName = getCountryNameById(countryId);
+            console.log("datum:", datum);
+            console.log("countryName:", countryName);
+            addToken(countryId);
+        }
+        if(datum.isToken){
+            const tokenId = datum.token.id;
+            console.assert(tokenId !== undefined);
+            console.log("token clicked:", tokenId);
+            //const tokenD3 = d3.select('[data-token-id='+tokenId+"]");
+            //const oldData = targetD3.data();
+            //const newData = oldData.selected = true;
+            //targetD3.data(newData);
+            selectedTokens = [];
+            if(!selectedTokens.find(x => datum.token.id === x.token.id)){
+                selectedTokens.push(datum);
+                console.log("tokenD3", targetD3.datum());
+                updateToppingCircles2();
             }
         }
-    });
+    }
 }
