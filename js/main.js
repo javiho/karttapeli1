@@ -103,6 +103,16 @@ var zoom = d3.behavior.zoom()
 
 svg.call(zoom);
 
+/*
+g.append("line")
+    .attr("x1", "0")
+    .attr("y1", "0")
+    .attr("x2", "200")
+    .attr("y2", "200")
+    .attr("stroke", "rgb(255,0,0)")
+    .attr("stroke-width", "2");
+    //.style("stroke:rgb(255,0,0);stroke-width:2");*/
+
 function initializeCountryData(topology){
     centroidData = topology
         .map(function(element){
@@ -176,8 +186,8 @@ function updateToppingCircles2(){
         })
         .style("fill", "green")
         .attr("r", 10)
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "5,5");
+        .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
+        .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
 
     console.log("selected tokens:", selectedTokens);
     selection
@@ -262,6 +272,12 @@ function addCircleToArea(pathD3){
 
 function initialize(){
     document.addEventListener("click", universalClickHandler);
+    /*document.addEventListener("keyup", function(event){
+        console.log("key up:", event.key);
+    });
+    document.addEventListener("keydown", function(event){
+        console.log("key down:", event.key, event.key === "a");
+    });*/
 }
 
 function universalClickHandler(event){
@@ -273,12 +289,62 @@ function universalClickHandler(event){
     if(datum !== undefined) {
         if(datum.isCountry) {
             const countryId = datum.id;
-            const countryName = getCountryNameById(countryId);
-            console.log("datum:", datum);
-            console.log("countryName:", countryName);
-            addToken(countryId);
+            if(!event.shiftKey) {
+                const countryName = getCountryNameById(countryId);
+                console.log("datum:", datum);
+                console.log("countryName:", countryName);
+                addToken(countryId);
+            }else{
+                // TODO: tähän jäätiin!
+                /*
+                tiedetään valittyjen tookkeneiden daattumit
+                tiedetään mihin pitäisi liikuttaa, edellisessä blokissa
+                jotenkin animoidaan se, että liikutetaan sen maan sentroidiin,
+                mutta ei renderöidä vielä uudestaan tookkeneita, koska muutenhan
+                tokeni näyttäytyisi uudessa paikassa heti. (Tai voitaisiin animoida joku toinen
+                objekti, esim vauhtiviivat tai haamu? Ideaalista olisi jos olisi sama klikattava ym
+                tookkeni joka on animoitavana).
+                jos käytetään animointiin samaa objektia, animoinnin jälkeen renderöidään uudestaan
+                tookkenit.
+
+                // TODO: olisi hyvä olla sekä mahdollisuus olla uudestaanrenderöimättä tokenia
+                kun transitio on kesken (tunnnistamienn renderöintimetodissa) sekä renderöidä uudestaan
+                kun transitio on päättynyt kyseisellä tokenilla.
+                 */
+                //console.log("pitäisi liikuyttaa tookkenia");
+                const countryEntry = countryData.find(x => x.id === countryId);
+                console.assert(countryEntry !== undefined);
+                const centroid = countryEntry.centroid;
+                //console.log("country entry:", countryEntry);
+                const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function(d){
+                    //console.log("topping cicgle d:", d);
+                    //console.log("selectedTokens in here", selectedTokens);
+                    for(let selectedTokenDatum of selectedTokens){
+                        //console.log("selectedTokenDatum", selectedTokenDatum);
+                        return d.token.id === selectedTokenDatum.token.id;
+                    }
+                });
+                // Update model before rendering transition.
+                for(let selectedTokenDatum of selectedTokens){
+                    //console.log("selectedTokenDatum", selectedTokenDatum);
+                    tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.id);
+                }
+                console.log("selectedTokens3Dselection", selectedTokens3Dselection);
+                selectedTokens3Dselection.transition()
+                    .each("end", function(){
+                        updateToppingCircles2();
+                    })
+                    .duration(2000)
+                    .attr("cx", function(d) {
+                        //console.log("d:", d);
+                        return projection([centroid[0], centroid[1]])[0];
+                    })
+                    .attr("cy", function(d) {
+                        return projection([centroid[0], centroid[1]])[1];
+                    });
+            }
         }
-        if(datum.isToken){
+        else if(datum.isToken){
             const tokenId = datum.token.id;
             console.assert(tokenId !== undefined);
             console.log("token clicked:", tokenId);

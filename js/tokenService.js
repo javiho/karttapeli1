@@ -29,6 +29,13 @@ const tokenService = {};
         };
     };
 
+    c.moveToken = function(tokenId, newLocationId){
+        console.assert(newLocationId !== undefined);
+        const token = c.tokens.find(x => x.id === tokenId);
+        console.assert(token !== undefined);
+        token.location = newLocationId;
+    };
+
     c.getTokensInCountry = function(countryId){
         // TODO
     };
