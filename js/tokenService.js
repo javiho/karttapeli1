@@ -36,8 +36,12 @@ const tokenService = {};
         token.location = newLocationId;
     };
 
+    /*
+    Pre-condition: countryId is a number.
+     */
     c.getTokensInCountry = function(countryId){
-        // TODO
+        console.assert(typeof countryId === "number");
+        return c.tokens.filter(token => token.location === countryId);
     };
 
     c._generateUniqueId = function(){

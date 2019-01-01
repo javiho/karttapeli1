@@ -160,7 +160,13 @@ function updateTokenData(){
 }
 
 function updateCentroidCircles2(){
-    let selection = g.selectAll(".centroid").data(centroidData);
+    const extendedCentroidData = centroidData.map(function(element){
+        const centroidEntry = {centroid: element};
+        centroidEntry.isCentroid = true;
+        return centroidEntry;
+    });
+    //console.log("extendedCentroidData:", extendedCentroidData);
+    let selection = g.selectAll(".centroid").data(extendedCentroidData);
     selection.enter()
         .append("circle")
         .attr("class", "centroid")
@@ -168,11 +174,14 @@ function updateCentroidCircles2(){
         .attr("fill", centroidFill);
     selection
         .attr("cx", function(d) {
-            return projection([d[0], d[1]])[0];
+            const centroid = d.centroid;
+            return projection([centroid[0], centroid[1]])[0];
         })
         .attr("cy", function(d) {
-            return projection([d[0], d[1]])[1];
-        })
+            const centroid = d.centroid;
+            return projection([centroid[0], centroid[1]])[1];
+        });
+    drawInCorrectOrder();
 }
 
 function updateToppingCircles2(){
@@ -214,6 +223,95 @@ function updateToppingCircles2(){
                 return "red";
             }
         });
+    updateTokenStackNumbers();
+}
+
+function updateTokenStackNumbers(){
+    /*
+    käy läpi kaikki alueet
+        jos on tookkeni alueella (1 tai useampi), pistä päälle numero
+        jos ei ole, ota mahdollinen numero pois
+
+    laabeleilla pitäisi olla koordinaatti
+
+    kun entteröidään, appendaa
+    kaikilla on datassa pituus ja leveys ja koordinaatit lasketaan aina projektiolla
+    kun exitoidaan, remoovataan
+    */
+    const textElementData = [];
+    countryData.forEach(function(countryPresentation){
+        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+        if(tokensInCountry.length > 0){
+            const newTextElementEntry = {
+                lon: countryPresentation.centroid[0],
+                lat: countryPresentation.centroid[1],
+                amountOfTokens: tokensInCountry.length,
+                isLabel: true
+            };
+            textElementData.push(newTextElementEntry);
+        }
+    });
+    //console.log("textElementData:", textElementData);
+
+    let selection = g.selectAll(".token-counter-number").data(textElementData);
+    selection
+        .enter()
+        .append("text")
+        .attr("class", "token-counter-number")
+        .attr("stroke", "white")
+        .attr("stroke-width", "0.5");
+    selection
+        .attr("x", function(d){
+            return projection([d.lon, d.lat])[0];
+        })
+        .attr("y", function(d){
+            return projection([d.lon, d.lat])[1];
+        })
+        .text(function(d){
+            return "" + d.amountOfTokens;
+        });
+    selection.exit().remove();
+    drawInCorrectOrder()
+}
+
+/*
+    Re-orders elements in the DOM so that they are drawn on top of each other in the correct order.
+ */
+function drawInCorrectOrder(){
+    const mapElements = g.selectAll("*");
+    //console.log("mapElements:", mapElements);
+    // Those that are before in the order are drawn behind those that are after.
+    const comparator = function(beforeElementData, afterElementData){
+        // Return positive value if beforeElement should be before afterElement, and vice versa,
+        // or zero value for arbitrary order.
+        const beforeElementPriority = getElementPriority(beforeElementData);
+        const afterElementPriority = getElementPriority(afterElementData);
+        if(afterElementPriority === beforeElementPriority){
+            return 0;
+        }else if(beforeElementPriority > afterElementPriority){
+            return 1;
+        }else{
+            return -1;
+        }
+    };
+    mapElements.sort(comparator); // This re-orders selected elements in the DOM.
+}
+
+function getElementPriority(elementData){
+    const background = (1000 * 1000 * 1000) * (-1);
+    const movableThing = 0;
+    const movableLabel = 1000 * 1000;
+    //console.log("getElementPriority called");
+    if(elementData.isCentroid === true){
+        return background + 1;
+    }
+    if(elementData.isToken === true){
+        return movableThing;
+    }
+    if(elementData.isLabel === true){
+        return movableLabel;
+    }
+    return background;
 }
 
 function handleCountryClick(d, i){
@@ -342,6 +440,9 @@ function universalClickHandler(event){
                     .attr("cy", function(d) {
                         return projection([centroid[0], centroid[1]])[1];
                     });
+                // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles2, se keskeyttää transition,
+                // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
+                drawInCorrectOrder();
             }
         }
         else if(datum.isToken){
