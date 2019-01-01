@@ -257,9 +257,10 @@ function updateTokenStackNumbers(){
     selection
         .enter()
         .append("text")
-        .attr("class", "token-counter-number")
+        //.attr("class", "token-counter-number")
         .attr("stroke", "white")
-        .attr("stroke-width", "0.5");
+        .attr("stroke-width", "0.5")
+        .classed({"token-counter-number": true, "unselectable-text": true});
     selection
         .attr("x", function(d){
             return projection([d.lon, d.lat])[0];
