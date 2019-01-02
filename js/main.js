@@ -250,6 +250,15 @@ function updateCentroidCircles(){
 
 function updateToppingCircles(){
     updateTokenData();
+    /* TODO: ensin pitäisi voida lisätä eri värisiä tokeneita
+    jokaista tokenia kohti
+        mikä on alue?
+        kuinka monta slottia on eli kuinka monta eri väriä edustettuna sillä alueella?
+        määrittele slotti-indeksi jotenkin
+        jokaista tokenia kohti
+            laske translaatio
+     */
+
     let selection = g.selectAll(".topping-circle").data(tokenData);
     selection.enter()
         .append("circle")
@@ -353,6 +362,28 @@ function getElementPriority(elementData){
         return movableLabel;
     }
     return background;
+}
+
+/*
+    distanceFromCenter is distance of the tokens's center from translation origin point.
+    slotAmount is how many slots there are in the area.
+    slotIndex determines which slot of the slots this token occupies (so slotIndex < slotAmount).
+ */
+function calculateTokenTranslation(distanceFromCenter, slotAmount, slotIndex){
+    console.assert(slotIndex < slotAmount);
+    // 1 slot -> 0 degrees
+    // 2 slots -> 0 and 180 degrees
+    // 3 slots -> 0, 120 and 240 degrees, etc.
+    const angleDegreesIncrementPerSlot = 360 / slotAmount;
+    console.log("angleDegreesIncrementPerSlot", angleDegreesIncrementPerSlot);
+    const angleDegrees = angleDegreesIncrementPerSlot * slotIndex; // index is 0-based.
+    const angleRadians = (angleDegrees * Math.PI) / 180;
+    console.log("angleRadians", angleRadians);
+    const x = Math.cos(angleRadians) * distanceFromCenter;
+    const y = Math.sin(angleRadians) * distanceFromCenter;
+    // Radians start at (r, 0), but translation should start at (0, r).
+    // So make x into y and y into x.
+    return {x: y, y: x};
 }
 
 /**************************** Update functions ends *************************************/
