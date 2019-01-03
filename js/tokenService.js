@@ -15,17 +15,18 @@ const tokenService = {};
         });*/
     };
 
-    c.addToken = function(locationCountryId){
-        const newToken = c._createToken(locationCountryId);
+    c.addToken = function(locationCountryId, playerId){
+        const newToken = c._createToken(locationCountryId, playerId);
         c.tokens.push(newToken);
         return newToken;
     };
 
-    c._createToken = function(countryId){
+    c._createToken = function(countryId, playerId){
         console.assert(countryId !== undefined);
         return {
             id: c._generateUniqueId(), // string
-            location: countryId
+            location: countryId,
+            owner: playerId
         };
     };
 
