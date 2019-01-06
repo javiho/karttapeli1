@@ -231,6 +231,19 @@ function getCountryNameById(idNumber){
     return name;
 }
 
+function getOwnersPresentInCountry(countryPresentation){
+    const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+    const ownersPresent = [];
+    tokensInCountry.forEach(function(token){
+        const owner = token.owner;
+        if(!(ownersPresent.includes(owner))){
+            ownersPresent.push(owner);
+        }
+    });
+    console.log("ownersPresent:", ownersPresent);
+    return ownersPresent;
+}
+
 /*************************** Data for rendering ends ******************************/
 
 
@@ -264,27 +277,20 @@ function updateCentroidCircles(){
 
 function updateToppingCircles(){
     updateTokenData();
-    /* TODO: ensin pitäisi voida lisätä eri värisiä tokeneita
-    jokaista tokenia kohti
-        mikä on alue?
-        kuinka monta slottia on eli kuinka monta eri väriä edustettuna sillä alueella?
-        määrittele slotti-indeksi jotenkin
-        jokaista tokenia kohti
-            laske translaatio
-     */
-
     let selection = g.selectAll(".topping-circle").data(tokenData);
     selection.enter()
         .append("circle")
         .attr("class", "topping-circle")
         .attr("data-token-id", function(d){
             return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
+            // TODO: vai tarvitseeko olla vain yksi jokaisella? ylimääräisethän jäävät alle piiloon.
         })
         .style("fill", currentPlayer.color)
         .attr("r", 10)
         .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
         .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
 
+    // TODO: voisi olla niin, että translaatio olisi 0,0 jos on vain yksi väri. Muuten on hämmentävän näköistä.
     console.log("selected tokens:", selectedTokens);
     selection
         .attr("cx", function(d) {
@@ -295,6 +301,39 @@ function updateToppingCircles(){
         .attr("cy", function(d) {
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[1];
+        })
+        .attr("transform", function(d){
+            const defaultDistanceFromCenter = 10; // Distance from centroid to token circle's center.
+            const slotPriorityComparator = function(owner1, owner2){
+                console.assert(owner1.name !== undefined);
+                console.assert(owner2.name !== undefined);
+                if(owner1.name < owner2.name){
+                    return -1;
+                }
+                if((owner1.name > owner2.name)){
+                    return 1;
+                }
+                return 0;
+            };
+            console.log("d", d);
+            const country = d.countryPresentation;
+            const ownersWithTokensPresent = getOwnersPresentInCountry(country);
+            ownersWithTokensPresent.sort(slotPriorityComparator);
+            const slotAmount = ownersWithTokensPresent.length;
+            const owner = d.token.owner;
+            const slotIndex = ownersWithTokensPresent.findIndex(e => e === owner);
+            console.log("slotAmount:", slotAmount);
+            console.log("slotIndex:", slotIndex);
+            console.assert(slotIndex > -1 && slotIndex < slotAmount);
+            const tokenTranslation = calculateTokenTranslation(defaultDistanceFromCenter, slotAmount, slotIndex);
+            // calculateTokenTranslation assumes y grows upwards,
+            // but it grows downwards with svg elements. So flip y axis.
+            tokenTranslation.y = -tokenTranslation.y;
+            const x = tokenTranslation.x;
+            const y = tokenTranslation.y;
+            const translationString = "translate("+x+","+y+")";
+            console.log("translation string:", translationString);
+            return translationString;
         })
         .attr("stroke", function(d){
             const contains = selectedTokens.find(function(element){
@@ -397,6 +436,9 @@ function calculateTokenTranslation(distanceFromCenter, slotAmount, slotIndex){
     const angleDegrees = angleDegreesIncrementPerSlot * slotIndex; // index is 0-based.
     const angleRadians = (angleDegrees * Math.PI) / 180;
     console.log("angleRadians", angleRadians);
+    console.log("Math.cos(angleRadians):", Math.cos(angleRadians));
+    console.log("Math.sin(angleRadians):", Math.sin(angleRadians));
+    console.log("distanceFromCenter", distanceFromCenter);
     const x = Math.cos(angleRadians) * distanceFromCenter;
     const y = Math.sin(angleRadians) * distanceFromCenter;
     // Radians start at (r, 0), but translation should start at (0, r).
@@ -468,7 +510,7 @@ function addToken(countryId){
         console.log("countryEntry is undefined");
         return;
     }
-    tokenService.addToken(countryEntry.id, currentPlayer.id);
+    tokenService.addToken(countryEntry.id, currentPlayer);
     console.log("all tokens:", tokenService.tokens);
     updateToppingCircles();
 }
@@ -504,6 +546,19 @@ function handleNextPlayerTurn(){
 
 
 /**************************** Other *************************************/
+
+/* meh
+function countOccurrencesInArray(array, condition){
+    const counted = array.reduce(function(allOccurrences, occurrence){
+        if(occurrence in allOccurrences){
+            allOccurrences[occurrence]++;
+        }else{
+            allOccurrences[occurrence] = 1;
+        }
+        return allOccurrences;
+    }, {});
+    return counted;
+}*/
 
 /* TODO: jos halutaan käyttää d3:n .on() metodia maan kuuntelemiseen
 function handleCountryClick(d, i){

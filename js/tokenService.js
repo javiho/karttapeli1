@@ -21,12 +21,19 @@ const tokenService = {};
         return newToken;
     };
 
-    c._createToken = function(countryId, playerId){
+    /*
+        Pre-condition: player is a player object.
+     */
+    c._createToken = function(countryId, player){
         console.assert(countryId !== undefined);
+        console.assert(player !== undefined);
+        console.assert(player.name !== undefined);
+        console.assert(player.id !== undefined);
+        console.assert(player.color !== undefined);
         return {
             id: c._generateUniqueId(), // string
             location: countryId,
-            owner: playerId
+            owner: player
         };
     };
 
