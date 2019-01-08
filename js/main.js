@@ -191,7 +191,46 @@ function updateTokenData(){
 }
 
 function getTextElementData(){
+    /*
+    TODO: kesken
+    on oltava myös omistaja textElementEntryssä
+    mutta miten voidaan päätellä translaatio?
+    - jos tiedetään omistaja ja muut omistajat samalla alueella ja järjestysfunktio, niin voidaan
+    mutta menee vaikeaksi
+    Voisi laittaa g:n sisään, mutta kai täytyy laittaa kaikki saman väriset sitten sen sisään?
+    Ja sitten menisi vaikeaksi jos siirretään token paikasta toiseen. Vai miksi menisi? Siiretään vain toisen
+    g:n sisään.
+    Toisaalta jos laittaa g-ryhmien sisään elementtejä, niin piirtojärjestyksen asettamisesta tulee hieman
+    monimutkaisempaa.
+    Jos ei haluta g-elementtejä, niin voidaan pistää johonkin globaaliin taulukkoon
+    alue.omistaja.translaatio-data, ettei tarvitse laskea erikseen laabeleille. Tämä data laskettaisiin
+    uudestaan aina tokenien päivityksen yhteydessä, ja tämä tarkoittaisi että laabeleiden päivittämistä
+    ennen pitäisi aina luoda se data.
+    Päätän nyt yrittää g-juttua. Mutta tieto omistajakohtaisesta lukumäärästä tarvitaan silti.
+    Se voisi tulla suoraan tokeninpäivityfunktiolta, jos tai riippuvuuksien vähentämisen vuoksi ei?
+    Translaatiota varten tämän ei tarvitse kuitenkaan tietää mitään.
+     */
     const textElementData = [];
+    tokenService.tokens.forEach(function(token){
+        const countryId = token.location;
+        const countryPresentation = getCountryEntryById(countryId);
+        console.assert(countryPresentation !== undefined);
+
+    });
+    countryData.forEach(function(countryPresentation){
+        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+        getOwnersPresentInCountry
+        if(tokensInCountry.length > 0){
+            const newTextElementEntry = {
+                lon: countryPresentation.centroid[0],
+                lat: countryPresentation.centroid[1],
+                amountOfTokens: tokensInCountry.length,
+                owner: owner, // The owner of those tokens of which amount this text element displays.
+                isLabel: true
+            };
+            textElementData.push(newTextElementEntry);
+        }
+    });
     countryData.forEach(function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
         if(tokensInCountry.length > 0){
@@ -199,6 +238,7 @@ function getTextElementData(){
                 lon: countryPresentation.centroid[0],
                 lat: countryPresentation.centroid[1],
                 amountOfTokens: tokensInCountry.length,
+                owner: owner, // The owner of those tokens of which amount this text element displays.
                 isLabel: true
             };
             textElementData.push(newTextElementEntry);
@@ -231,6 +271,9 @@ function getCountryNameById(idNumber){
     return name;
 }
 
+/*
+    Returns an array of Player objects.
+ */
 function getOwnersPresentInCountry(countryPresentation){
     const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
     const ownersPresent = [];
@@ -290,7 +333,6 @@ function updateToppingCircles(){
         .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
         .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
 
-    // TODO: voisi olla niin, että translaatio olisi 0,0 jos on vain yksi väri. Muuten on hämmentävän näköistä.
     console.log("selected tokens:", selectedTokens);
     selection
         .attr("cx", function(d) {
