@@ -39,6 +39,7 @@ let players = []; // Array of player objects.
 let currentPlayer = null; // A player object
 
 const centroidFill = "rgba(255, 128, 0, 1)";
+const defaultTokenDistanceFromCentroid = 10; // Distance from centroid to token circle's center.
 
 initializeDocument();
 
@@ -209,36 +210,20 @@ function getTextElementData(){
     Päätän nyt yrittää g-juttua. Mutta tieto omistajakohtaisesta lukumäärästä tarvitaan silti.
     Se voisi tulla suoraan tokeninpäivityfunktiolta, jos tai riippuvuuksien vähentämisen vuoksi ei?
     Translaatiota varten tämän ei tarvitse kuitenkaan tietää mitään.
+    - Toisaalta ei nyt äkkiseltään tule mieleen, miten g-jutun voisi toteuttaa d3:lla.
+    enterissä luodaan tokenit, ja ne kai täytyy erikseen lisätä oikeaan g:hen?
      */
     const textElementData = [];
-    tokenService.tokens.forEach(function(token){
-        const countryId = token.location;
-        const countryPresentation = getCountryEntryById(countryId);
-        console.assert(countryPresentation !== undefined);
-
-    });
     countryData.forEach(function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-        getOwnersPresentInCountry
+       // const translationString =
         if(tokensInCountry.length > 0){
             const newTextElementEntry = {
                 lon: countryPresentation.centroid[0],
                 lat: countryPresentation.centroid[1],
                 amountOfTokens: tokensInCountry.length,
-                owner: owner, // The owner of those tokens of which amount this text element displays.
-                isLabel: true
-            };
-            textElementData.push(newTextElementEntry);
-        }
-    });
-    countryData.forEach(function(countryPresentation){
-        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-        if(tokensInCountry.length > 0){
-            const newTextElementEntry = {
-                lon: countryPresentation.centroid[0],
-                lat: countryPresentation.centroid[1],
-                amountOfTokens: tokensInCountry.length,
-                owner: owner, // The owner of those tokens of which amount this text element displays.
+                //owner: owner, // The owner of those tokens of which amount this text element displays.
+               // translatonString: translatonString,
                 isLabel: true
             };
             textElementData.push(newTextElementEntry);
@@ -283,7 +268,7 @@ function getOwnersPresentInCountry(countryPresentation){
             ownersPresent.push(owner);
         }
     });
-    console.log("ownersPresent:", ownersPresent);
+    //console.log("ownersPresent:", ownersPresent);
     return ownersPresent;
 }
 
@@ -333,7 +318,7 @@ function updateToppingCircles(){
         .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
         .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
 
-    console.log("selected tokens:", selectedTokens);
+    //console.log("selected tokens:", selectedTokens);
     selection
         .attr("cx", function(d) {
             //console.log("d:", d);
@@ -345,36 +330,14 @@ function updateToppingCircles(){
             return projection([centroid[0], centroid[1]])[1];
         })
         .attr("transform", function(d){
-            const defaultDistanceFromCenter = 10; // Distance from centroid to token circle's center.
-            const slotPriorityComparator = function(owner1, owner2){
-                console.assert(owner1.name !== undefined);
-                console.assert(owner2.name !== undefined);
-                if(owner1.name < owner2.name){
-                    return -1;
-                }
-                if((owner1.name > owner2.name)){
-                    return 1;
-                }
-                return 0;
-            };
-            console.log("d", d);
+            //console.log("d", d);
             const country = d.countryPresentation;
-            const ownersWithTokensPresent = getOwnersPresentInCountry(country);
-            ownersWithTokensPresent.sort(slotPriorityComparator);
-            const slotAmount = ownersWithTokensPresent.length;
             const owner = d.token.owner;
-            const slotIndex = ownersWithTokensPresent.findIndex(e => e === owner);
-            console.log("slotAmount:", slotAmount);
-            console.log("slotIndex:", slotIndex);
-            console.assert(slotIndex > -1 && slotIndex < slotAmount);
-            const tokenTranslation = calculateTokenTranslation(defaultDistanceFromCenter, slotAmount, slotIndex);
-            // calculateTokenTranslation assumes y grows upwards,
-            // but it grows downwards with svg elements. So flip y axis.
-            tokenTranslation.y = -tokenTranslation.y;
+            const tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
             const x = tokenTranslation.x;
             const y = tokenTranslation.y;
             const translationString = "translate("+x+","+y+")";
-            console.log("translation string:", translationString);
+            //console.log("translation string:", translationString);
             return translationString;
         })
         .attr("stroke", function(d){
@@ -392,6 +355,22 @@ function updateToppingCircles(){
             }
         });
     updateTokenStackNumbers();
+}
+
+/*
+    Pre-condition: owner is a Player object.
+    TODO funktion nimi
+ */
+function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
+    console.assert(owner.color !== undefined); // does it look like a Player object. // TODO horrible
+    const ownersWithTokensPresent = getOwnersPresentInCountry(countryPresentation);
+    const slotAmount = ownersWithTokensPresent.length;
+    const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
+    //console.log("slotAmount:", slotAmount);
+    //console.log("slotIndex:", slotIndex);
+    console.assert(slotIndex > -1 && slotIndex < slotAmount);
+    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
+    return tokenTranslation;
 }
 
 function updateTokenStackNumbers(){
@@ -446,6 +425,24 @@ function drawInCorrectOrder(){
     mapElements.sort(comparator); // This re-orders selected elements in the DOM.
 }
 
+function getTokenSlotIndex(ownersPresent, thisOwner){
+    const slotPriorityComparator = function(owner1, owner2){
+        console.assert(owner1.name !== undefined);
+        console.assert(owner2.name !== undefined);
+        if(owner1.name < owner2.name){ return -1; }
+        if(owner1.name > owner2.name){ return 1; }
+        return 0;
+    };
+    const shallowCopyOwnersPresent = ownersPresent.slice(); // Sorting will mutate the array so copy it.
+    shallowCopyOwnersPresent.sort(slotPriorityComparator);
+    const slotAmount = shallowCopyOwnersPresent.length;
+    const slotIndex = shallowCopyOwnersPresent.findIndex(e => e === thisOwner);
+    //console.log("slotAmount:", slotAmount);
+    //console.log("slotIndex:", slotIndex);
+    console.assert(slotIndex > -1 && slotIndex < slotAmount);
+    return slotIndex;
+}
+
 function getElementPriority(elementData){
     const background = (1000 * 1000 * 1000) * (-1);
     const movableThing = 0;
@@ -474,18 +471,24 @@ function calculateTokenTranslation(distanceFromCenter, slotAmount, slotIndex){
     // 2 slots -> 0 and 180 degrees
     // 3 slots -> 0, 120 and 240 degrees, etc.
     const angleDegreesIncrementPerSlot = 360 / slotAmount;
-    console.log("angleDegreesIncrementPerSlot", angleDegreesIncrementPerSlot);
+    //console.log("angleDegreesIncrementPerSlot", angleDegreesIncrementPerSlot);
     const angleDegrees = angleDegreesIncrementPerSlot * slotIndex; // index is 0-based.
     const angleRadians = (angleDegrees * Math.PI) / 180;
-    console.log("angleRadians", angleRadians);
-    console.log("Math.cos(angleRadians):", Math.cos(angleRadians));
-    console.log("Math.sin(angleRadians):", Math.sin(angleRadians));
-    console.log("distanceFromCenter", distanceFromCenter);
-    const x = Math.cos(angleRadians) * distanceFromCenter;
-    const y = Math.sin(angleRadians) * distanceFromCenter;
+    //console.log("angleRadians", angleRadians);
+    //console.log("Math.cos(angleRadians):", Math.cos(angleRadians));
+    //console.log("Math.sin(angleRadians):", Math.sin(angleRadians));
+    //console.log("distanceFromCenter", distanceFromCenter);
+    let x = Math.cos(angleRadians) * distanceFromCenter;
+    let y = Math.sin(angleRadians) * distanceFromCenter;
     // Radians start at (r, 0), but translation should start at (0, r).
     // So make x into y and y into x.
-    return {x: y, y: x};
+    let oldX = x;
+    x = y;
+    y = oldX;
+    // calculateTokenTranslation assumes y grows upwards,
+    // but it grows downwards with svg elements. So flip y axis.
+    y = -y;
+    return {x: x, y: y};
 }
 
 /**************************** Update functions ends *************************************/
