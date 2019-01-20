@@ -216,19 +216,26 @@ function getTextElementData(){
     const textElementData = [];
     countryData.forEach(function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-       // const translationString =
+        const ownersPresent = getOwnersPresentInCountry(countryPresentation);
         if(tokensInCountry.length > 0){
-            const newTextElementEntry = {
-                lon: countryPresentation.centroid[0],
-                lat: countryPresentation.centroid[1],
-                amountOfTokens: tokensInCountry.length,
-                //owner: owner, // The owner of those tokens of which amount this text element displays.
-               // translatonString: translatonString,
-                isLabel: true
-            };
-            textElementData.push(newTextElementEntry);
+            const ownersAndTokenAmounts = getOwnerTokenAmountsInCountry(countryPresentation); // Map
+            //console.log("ownersAndTokenAmounts:", ownersAndTokenAmounts );
+            ownersPresent.forEach(function(owner){
+                //console.log("owner:", owner);
+                //console.log("ownersAndTokenAmounts.get(owner):", ownersAndTokenAmounts.get(owner));
+                const newTextElementEntry = {
+                    countryPresentation: countryPresentation,
+                    lon: countryPresentation.centroid[0],
+                    lat: countryPresentation.centroid[1],
+                    amountOfTokens: ownersAndTokenAmounts.get(owner),
+                    owner: owner, // The owner of those tokens of which amount this text element displays.
+                    isLabel: true
+                };
+                textElementData.push(newTextElementEntry);
+            });
         }
     });
+    //console.log("returning textElementData:", textElementData);
     return textElementData;
 }
 
@@ -270,6 +277,24 @@ function getOwnersPresentInCountry(countryPresentation){
     });
     //console.log("ownersPresent:", ownersPresent);
     return ownersPresent;
+}
+
+/*
+    Return value: a Map where keys are Players and values are their token amounts in the country.
+ */
+function getOwnerTokenAmountsInCountry(countryPresentation){
+    const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+    const map = new Map();
+    tokensInCountry.forEach(function(token){
+        const owner = token.owner;
+        if(!map.has(owner)){
+            map.set(owner, 1);
+        }else{
+            const amount = map.get(owner);
+            map.set(owner, amount + 1);
+        }
+    });
+    return map;
 }
 
 /*************************** Data for rendering ends ******************************/
@@ -357,22 +382,6 @@ function updateToppingCircles(){
     updateTokenStackNumbers();
 }
 
-/*
-    Pre-condition: owner is a Player object.
-    TODO funktion nimi
- */
-function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
-    console.assert(owner.color !== undefined); // does it look like a Player object. // TODO horrible
-    const ownersWithTokensPresent = getOwnersPresentInCountry(countryPresentation);
-    const slotAmount = ownersWithTokensPresent.length;
-    const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
-    //console.log("slotAmount:", slotAmount);
-    //console.log("slotIndex:", slotIndex);
-    console.assert(slotIndex > -1 && slotIndex < slotAmount);
-    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
-    return tokenTranslation;
-}
-
 function updateTokenStackNumbers(){
     const textElementData = getTextElementData();
     //console.log("textElementData:", textElementData);
@@ -390,6 +399,17 @@ function updateTokenStackNumbers(){
         })
         .attr("y", function(d){
             return projection([d.lon, d.lat])[1];
+        })
+        .attr("transform", function(d){
+            //console.log("d", d);
+            const country = d.countryPresentation;
+            const owner = d.owner;
+            const tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
+            const x = tokenTranslation.x;
+            const y = tokenTranslation.y;
+            const translationString = "translate("+x+","+y+")";
+            //console.log("translation string:", translationString);
+            return translationString;
         })
         .text(function(d){
             return "" + d.amountOfTokens;
@@ -423,6 +443,22 @@ function drawInCorrectOrder(){
         }
     };
     mapElements.sort(comparator); // This re-orders selected elements in the DOM.
+}
+
+/*
+    Pre-condition: owner is a Player object.
+    TODO funktion nimi
+ */
+function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
+    console.assert(owner.color !== undefined); // does it look like a Player object. // TODO horrible
+    const ownersWithTokensPresent = getOwnersPresentInCountry(countryPresentation);
+    const slotAmount = ownersWithTokensPresent.length;
+    const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
+    //console.log("slotAmount:", slotAmount);
+    //console.log("slotIndex:", slotIndex);
+    console.assert(slotIndex > -1 && slotIndex < slotAmount);
+    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
+    return tokenTranslation;
 }
 
 function getTokenSlotIndex(ownersPresent, thisOwner){
@@ -556,7 +592,7 @@ function addToken(countryId){
         return;
     }
     tokenService.addToken(countryEntry.id, currentPlayer);
-    console.log("all tokens:", tokenService.tokens);
+    //console.log("all tokens:", tokenService.tokens);
     updateToppingCircles();
 }
 
