@@ -546,20 +546,25 @@ function universalClickHandler(event){
                 // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
                 // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
             }else{
+                selectedTokens = [];
+                updateToppingCircles();
                 console.log("Nothing here yet");
             }
         }
-        else if(datum.isToken){
+        else if(datum.isToken) {
             const tokenId = datum.token.id;
             console.assert(tokenId !== undefined);
             console.log("token clicked:", tokenId);
             selectedTokens = [];
-            if(!selectedTokens.find(x => datum.token.id === x.token.id)){
+            if (!selectedTokens.find(x => datum.token.id === x.token.id)) {
                 selectedTokens.push(datum);
                 console.log("tokenD3", targetD3.datum());
                 updateToppingCircles();
             }
         }
+    }else{
+        selectedTokens = [];
+        updateToppingCircles();
     }
 }
 
