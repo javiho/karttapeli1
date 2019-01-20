@@ -192,27 +192,6 @@ function updateTokenData(){
 }
 
 function getTextElementData(){
-    /*
-    TODO: kesken
-    on oltava myös omistaja textElementEntryssä
-    mutta miten voidaan päätellä translaatio?
-    - jos tiedetään omistaja ja muut omistajat samalla alueella ja järjestysfunktio, niin voidaan
-    mutta menee vaikeaksi
-    Voisi laittaa g:n sisään, mutta kai täytyy laittaa kaikki saman väriset sitten sen sisään?
-    Ja sitten menisi vaikeaksi jos siirretään token paikasta toiseen. Vai miksi menisi? Siiretään vain toisen
-    g:n sisään.
-    Toisaalta jos laittaa g-ryhmien sisään elementtejä, niin piirtojärjestyksen asettamisesta tulee hieman
-    monimutkaisempaa.
-    Jos ei haluta g-elementtejä, niin voidaan pistää johonkin globaaliin taulukkoon
-    alue.omistaja.translaatio-data, ettei tarvitse laskea erikseen laabeleille. Tämä data laskettaisiin
-    uudestaan aina tokenien päivityksen yhteydessä, ja tämä tarkoittaisi että laabeleiden päivittämistä
-    ennen pitäisi aina luoda se data.
-    Päätän nyt yrittää g-juttua. Mutta tieto omistajakohtaisesta lukumäärästä tarvitaan silti.
-    Se voisi tulla suoraan tokeninpäivityfunktiolta, jos tai riippuvuuksien vähentämisen vuoksi ei?
-    Translaatiota varten tämän ei tarvitse kuitenkaan tietää mitään.
-    - Toisaalta ei nyt äkkiseltään tule mieleen, miten g-jutun voisi toteuttaa d3:lla.
-    enterissä luodaan tokenit, ja ne kai täytyy erikseen lisätä oikeaan g:hen?
-     */
     const textElementData = [];
     countryData.forEach(function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
@@ -542,23 +521,23 @@ function universalClickHandler(event){
     if(datum !== undefined) {
         if(datum.isCountry) {
             const countryId = datum.id;
-            if(!event.shiftKey) {
+            if(event.ctrlKey) {
                 const countryName = getCountryNameById(countryId);
                 //console.log("datum:", datum);
                 //console.log("countryName:", countryName);
                 addToken(countryId);
-            }else{
+            }else if(event.shiftKey) {
                 const countryEntry = countryData.find(x => x.id === countryId);
                 console.assert(countryEntry !== undefined);
                 const centroid = countryEntry.centroid;
                 //console.log("country entry:", countryEntry);
-                const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function(d){
-                    for(let selectedTokenDatum of selectedTokens){
+                const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function (d) {
+                    for (let selectedTokenDatum of selectedTokens) {
                         return d.token.id === selectedTokenDatum.token.id;
                     }
                 });
                 // Update model before rendering transition.
-                for(let selectedTokenDatum of selectedTokens){
+                for (let selectedTokenDatum of selectedTokens) {
                     //console.log("selectedTokenDatum", selectedTokenDatum);
                     tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.id);
                 }
@@ -566,6 +545,8 @@ function universalClickHandler(event){
                 transitionTokens(selectedTokens3Dselection, centroid);
                 // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
                 // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
+            }else{
+                console.log("Nothing here yet");
             }
         }
         else if(datum.isToken){
