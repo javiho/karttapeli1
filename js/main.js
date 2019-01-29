@@ -39,7 +39,9 @@ let players = []; // Array of player objects.
 let currentPlayer = null; // A player object
 
 const centroidFill = "rgba(255, 128, 0, 1)";
-const defaultTokenDistanceFromCentroid = 10; // Distance from centroid to token circle's center.
+const maxZoomScale = 50;
+let tokenStacksByOwner = true;
+let defaultTokenDistanceFromCentroid = 10; //10; // Distance from centroid to token circle's center.
 
 initializeDocument();
 
@@ -107,7 +109,7 @@ var zoom = d3.behavior.zoom()
         //g.selectAll("path")
         //    .attr("stroke-width", calculateNewStrokeWidth(d3.event.scale, 1));
     })
-    .scaleExtent([1, 10]);
+    .scaleExtent([1, maxZoomScale]);
 
 svg.call(zoom);
 
@@ -333,11 +335,17 @@ function updateToppingCircles(){
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[1];
         })
-        .attr("transform", function(d){
+        .attr("transform", function(d) {
             //console.log("d", d);
             const country = d.countryPresentation;
             const owner = d.token.owner;
-            const tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
+            let tokenTranslation = null;
+            if (tokenStacksByOwner) {
+                tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
+            }else{
+                // Tokens of same owner are not stacked.
+                tokenTranslation = getSpreadTokenTranslationByOwnerAndCountry(country, d.token);
+            }
             const x = tokenTranslation.x;
             const y = tokenTranslation.y;
             const translationString = "translate("+x+","+y+")";
@@ -438,6 +446,47 @@ function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
     console.assert(slotIndex > -1 && slotIndex < slotAmount);
     const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
     return tokenTranslation;
+}
+
+/*
+    Same as getTokenTranslationFromOwnerAndCountry, except tokens are not stacked.
+ */
+function getSpreadTokenTranslationByOwnerAndCountry(countryPresentation, token){
+    const tokensPresent = tokenService.getTokensInCountry(countryPresentation.id);
+    const slotAmount = tokensPresent.length;
+    const slotIndex = getSpreadTokenSlotIndex(tokensPresent, token);
+    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
+    return tokenTranslation;
+}
+
+/*
+    Returns slot index of thisToken when tokens are arranged by first their owner and second by their id
+    and every token of has tokensPresent it's own slot.
+ */
+function getSpreadTokenSlotIndex(tokensPresent, thisToken){
+    const slotPriorityComparator = function(token1, token2){
+        console.assert(token1.id !== undefined);
+        console.assert(token2.id !== undefined);
+        console.assert(token1.owner.name !== undefined);
+        console.assert(token2.owner.name !== undefined);
+        if(token1.owner === token2.owner) {
+            if (token1.id < token2.id) { return -1; }
+            if (token1.id > token2.id) { return 1; }
+            return 0;
+        }else{
+            if(token1.owner.name < token2.owner.name){ return -1; }
+            if(token1.owner.name > token2.owner.name){ return 1; }
+            return 0;
+        }
+    };
+    const shallowCopyTokensPresent = tokensPresent.slice(); // Sorting will mutate the array so copy it.
+    shallowCopyTokensPresent.sort(slotPriorityComparator);
+    const slotAmount = shallowCopyTokensPresent.length;
+    const slotIndex = shallowCopyTokensPresent.findIndex(e => e === thisToken);
+    //console.log("slotAmount:", slotAmount);
+    //console.log("slotIndex:", slotIndex);
+    console.assert(slotIndex > -1 && slotIndex < slotAmount);
+    return slotIndex;
 }
 
 function getTokenSlotIndex(ownersPresent, thisOwner){
