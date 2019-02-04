@@ -40,7 +40,7 @@ let currentPlayer = null; // A player object
 
 const centroidFill = "rgba(255, 128, 0, 1)";
 const maxZoomScale = 50;
-let tokenStacksByOwner = true;
+let tokenStacksByOwner = false;
 let defaultTokenDistanceFromCentroid = 10; //10; // Distance from centroid to token circle's center.
 
 initializeDocument();
@@ -113,16 +113,6 @@ var zoom = d3.behavior.zoom()
 
 svg.call(zoom);
 
-/* TODO: jos halutaan piirrellä viivoja
-g.append("line")
-    .attr("x1", "0")
-    .attr("y1", "0")
-    .attr("x2", "200")
-    .attr("y2", "200")
-    .attr("stroke", "rgb(255,0,0)")
-    .attr("stroke-width", "2");
-    //.style("stroke:rgb(255,0,0);stroke-width:2");*/
-
 function initializeDocument(){
     document.addEventListener("click", universalClickHandler);
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
@@ -139,143 +129,27 @@ function initializeDocument(){
 /*************************** Data for rendering ******************************/
 
 function initializePlayerData(){
-    players = [
+    players = getInitialPlayerData();
+    currentPlayer = players[0];
+}
+
+function getInitialPlayerData(){
+    const players = [
         {id: 8, name: "player1", color: "green"},
         {id: 9, name: "player2", color: "gold"},
         {id: 10, name: "player3", color: "aliceblue"}
     ];
-    currentPlayer = players[0];
+    return players;
 }
 
 function initializeCountryData(topology){
-    centroidData = topology
-        .map(function(element){
-            // return path.centroid(element); // "computes the projected centroid on the Cartesian plane"
-            console.assert(d3.geo.centroid(element) !== undefined);
-            return d3.geo.centroid(element); // "Returns the spherical centroid"
-        });
-    // 252 maan nimeä, mutta 177 topologiahommelia!
-    for(let i = 0; i < topology.length; i++){
-        // topology was in same order and of same length as centroid data.
-        const featureEntry = topology[i];
-        const centroid = centroidData[i];
-        const featureIdNumber = parseInt(featureEntry.id);
-        // Some features in the json area -99 and those are not countries.
-        if(featureIdNumber === -99){
-            console.log("was -99");
-            continue;
-        }
-        const countryName = getCountryNameById(featureIdNumber);
-        const newCountryEntry = {};
-        newCountryEntry.name = countryName;
-        newCountryEntry.centroid = centroid;
-        newCountryEntry.id = featureIdNumber;
-        countryData.push(newCountryEntry);
-    }
-    console.log("countryData:", countryData);
+    centroidData = dataForRendering.initializeCentroidData(topology);
+    countryData = dataForRendering.initializeCountryData(topology, centroidData, countryNames);
 }
 
 function updateTokenData(){
-    let newTokenData = [];
-    tokenService.tokens.forEach(function(element){
-        const tokenModel = element;
-
-        const countryId = element.location;
-        const countryPresentation = getCountryEntryById(countryId);
-        console.assert(countryPresentation !== undefined);
-        const newTokenPresentation = {
-            token: tokenModel,
-            countryPresentation: countryPresentation,
-            isToken: true
-        };
-        newTokenData.push(newTokenPresentation);
-    });
+    const newTokenData = dataForRendering.updateTokenData(countryData);
     tokenData = newTokenData;
-}
-
-function getTextElementData(){
-    const textElementData = [];
-    countryData.forEach(function(countryPresentation){
-        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-        const ownersPresent = getOwnersPresentInCountry(countryPresentation);
-        if(tokensInCountry.length > 0){
-            const ownersAndTokenAmounts = getOwnerTokenAmountsInCountry(countryPresentation); // Map
-            //console.log("ownersAndTokenAmounts:", ownersAndTokenAmounts );
-            ownersPresent.forEach(function(owner){
-                //console.log("owner:", owner);
-                //console.log("ownersAndTokenAmounts.get(owner):", ownersAndTokenAmounts.get(owner));
-                const newTextElementEntry = {
-                    countryPresentation: countryPresentation,
-                    lon: countryPresentation.centroid[0],
-                    lat: countryPresentation.centroid[1],
-                    amountOfTokens: ownersAndTokenAmounts.get(owner),
-                    owner: owner, // The owner of those tokens of which amount this text element displays.
-                    isLabel: true
-                };
-                textElementData.push(newTextElementEntry);
-            });
-        }
-    });
-    //console.log("returning textElementData:", textElementData);
-    return textElementData;
-}
-
-/*
-    Gets country entry from countryData by country id, or undefined if it doesn't exist.
- */
-function getCountryEntryById(countryId){
-    const countryEntry = countryData.find(function(element){
-        return element.id === countryId;
-    });
-    return countryEntry;
-}
-
-/*
-    Pre-condition: there is a country name for idString in countryNames.
- */
-function getCountryNameById(idNumber){
-    //const idNumber = parseInt(idString);
-    const countryEntry = countryNames.find( entry => parseInt(entry.id) === idNumber );
-    if(countryEntry === undefined){
-        console.log("getCountryNameById: idNumber:", idNumber);
-    }
-    const name = countryEntry.name;
-    console.assert(name !== undefined);
-    return name;
-}
-
-/*
-    Returns an array of Player objects.
- */
-function getOwnersPresentInCountry(countryPresentation){
-    const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-    const ownersPresent = [];
-    tokensInCountry.forEach(function(token){
-        const owner = token.owner;
-        if(!(ownersPresent.includes(owner))){
-            ownersPresent.push(owner);
-        }
-    });
-    //console.log("ownersPresent:", ownersPresent);
-    return ownersPresent;
-}
-
-/*
-    Return value: a Map where keys are Players and values are their token amounts in the country.
- */
-function getOwnerTokenAmountsInCountry(countryPresentation){
-    const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
-    const map = new Map();
-    tokensInCountry.forEach(function(token){
-        const owner = token.owner;
-        if(!map.has(owner)){
-            map.set(owner, 1);
-        }else{
-            const amount = map.get(owner);
-            map.set(owner, amount + 1);
-        }
-    });
-    return map;
 }
 
 /*************************** Data for rendering ends ******************************/
@@ -290,7 +164,6 @@ function updateCentroidCircles(){
         centroidEntry.isCentroid = true;
         return centroidEntry;
     });
-    //console.log("extendedCentroidData:", extendedCentroidData);
     let selection = g.selectAll(".centroid").data(extendedCentroidData);
     selection.enter()
         .append("circle")
@@ -317,17 +190,13 @@ function updateToppingCircles(){
         .attr("class", "topping-circle")
         .attr("data-token-id", function(d){
             return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
-            // TODO: vai tarvitseeko olla vain yksi jokaisella? ylimääräisethän jäävät alle piiloon.
         })
         .style("fill", currentPlayer.color)
         .attr("r", 10)
         .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
         .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
-
-    //console.log("selected tokens:", selectedTokens);
     selection
         .attr("cx", function(d) {
-            //console.log("d:", d);
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[0];
         })
@@ -336,7 +205,6 @@ function updateToppingCircles(){
             return projection([centroid[0], centroid[1]])[1];
         })
         .attr("transform", function(d) {
-            //console.log("d", d);
             const country = d.countryPresentation;
             const owner = d.token.owner;
             let tokenTranslation = null;
@@ -349,14 +217,10 @@ function updateToppingCircles(){
             const x = tokenTranslation.x;
             const y = tokenTranslation.y;
             const translationString = "translate("+x+","+y+")";
-            //console.log("translation string:", translationString);
             return translationString;
         })
         .attr("stroke", function(d){
             const contains = selectedTokens.find(function(element){
-                //console.log("d:", d.token.id);
-                //console.log("element:", element.token.id);
-                //console.log("equals:", d.token.id === element.token.id);
                 return element.token.id === d.token.id;
             });
             if(!contains){
@@ -370,8 +234,7 @@ function updateToppingCircles(){
 }
 
 function updateTokenStackNumbers(){
-    const textElementData = getTextElementData();
-    //console.log("textElementData:", textElementData);
+    const textElementData = dataForRendering.getTextElementData(countryData);
     let selection = g.selectAll(".token-counter-number").data(textElementData);
     selection
         .enter()
@@ -388,14 +251,12 @@ function updateTokenStackNumbers(){
             return projection([d.lon, d.lat])[1];
         })
         .attr("transform", function(d){
-            //console.log("d", d);
             const country = d.countryPresentation;
             const owner = d.owner;
             const tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
             const x = tokenTranslation.x;
             const y = tokenTranslation.y;
             const translationString = "translate("+x+","+y+")";
-            //console.log("translation string:", translationString);
             return translationString;
         })
         .text(function(d){
@@ -414,7 +275,6 @@ function updateCurrentPlayerInfo(){
  */
 function drawInCorrectOrder(){
     const mapElements = g.selectAll("*");
-    //console.log("mapElements:", mapElements);
     // Those that are before in the order are drawn behind those that are after.
     const comparator = function(beforeElementData, afterElementData){
         // Return positive value if beforeElement should be before afterElement, and vice versa,
@@ -438,11 +298,9 @@ function drawInCorrectOrder(){
  */
 function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
     console.assert(owner.color !== undefined); // does it look like a Player object. // TODO horrible
-    const ownersWithTokensPresent = getOwnersPresentInCountry(countryPresentation);
+    const ownersWithTokensPresent = dataForRendering.getOwnersPresentInCountry(countryPresentation);
     const slotAmount = ownersWithTokensPresent.length;
     const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
-    //console.log("slotAmount:", slotAmount);
-    //console.log("slotIndex:", slotIndex);
     console.assert(slotIndex > -1 && slotIndex < slotAmount);
     const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
     return tokenTranslation;
@@ -483,8 +341,6 @@ function getSpreadTokenSlotIndex(tokensPresent, thisToken){
     shallowCopyTokensPresent.sort(slotPriorityComparator);
     const slotAmount = shallowCopyTokensPresent.length;
     const slotIndex = shallowCopyTokensPresent.findIndex(e => e === thisToken);
-    //console.log("slotAmount:", slotAmount);
-    //console.log("slotIndex:", slotIndex);
     console.assert(slotIndex > -1 && slotIndex < slotAmount);
     return slotIndex;
 }
@@ -501,8 +357,6 @@ function getTokenSlotIndex(ownersPresent, thisOwner){
     shallowCopyOwnersPresent.sort(slotPriorityComparator);
     const slotAmount = shallowCopyOwnersPresent.length;
     const slotIndex = shallowCopyOwnersPresent.findIndex(e => e === thisOwner);
-    //console.log("slotAmount:", slotAmount);
-    //console.log("slotIndex:", slotIndex);
     console.assert(slotIndex > -1 && slotIndex < slotAmount);
     return slotIndex;
 }
@@ -511,7 +365,6 @@ function getElementPriority(elementData){
     const background = (1000 * 1000 * 1000) * (-1);
     const movableThing = 0;
     const movableLabel = 1000 * 1000;
-    //console.log("getElementPriority called");
     if(elementData.isCentroid === true){
         return background + 1;
     }
@@ -535,13 +388,8 @@ function calculateTokenTranslation(distanceFromCenter, slotAmount, slotIndex){
     // 2 slots -> 0 and 180 degrees
     // 3 slots -> 0, 120 and 240 degrees, etc.
     const angleDegreesIncrementPerSlot = 360 / slotAmount;
-    //console.log("angleDegreesIncrementPerSlot", angleDegreesIncrementPerSlot);
     const angleDegrees = angleDegreesIncrementPerSlot * slotIndex; // index is 0-based.
     const angleRadians = (angleDegrees * Math.PI) / 180;
-    //console.log("angleRadians", angleRadians);
-    //console.log("Math.cos(angleRadians):", Math.cos(angleRadians));
-    //console.log("Math.sin(angleRadians):", Math.sin(angleRadians));
-    //console.log("distanceFromCenter", distanceFromCenter);
     let x = Math.cos(angleRadians) * distanceFromCenter;
     let y = Math.sin(angleRadians) * distanceFromCenter;
     // Radians start at (r, 0), but translation should start at (0, r).
@@ -571,9 +419,7 @@ function universalClickHandler(event){
         if(datum.isCountry) {
             const countryId = datum.id;
             if(event.ctrlKey) {
-                const countryName = getCountryNameById(countryId);
-                //console.log("datum:", datum);
-                //console.log("countryName:", countryName);
+                const countryName = dataForRendering.getCountryNameById(countryId, countryNames); // TODO: mihin tätä tarvitaan?
                 addToken(countryId);
             }else if(event.shiftKey) {
                 const countryEntry = countryData.find(x => x.id === countryId);
@@ -621,13 +467,12 @@ function universalClickHandler(event){
     Pre-condition: countryId is a valid country id.
  */
 function addToken(countryId){
-    const countryEntry = getCountryEntryById(countryId);
+    const countryEntry = dataForRendering.getCountryEntryById(countryId, countryData);
     if(countryEntry === undefined){
         console.log("countryEntry is undefined");
         return;
     }
     tokenService.addToken(countryEntry.id, currentPlayer);
-    //console.log("all tokens:", tokenService.tokens);
     updateToppingCircles();
 }
 
@@ -636,7 +481,7 @@ function transitionTokens(selectedTokens3Dselection, targetGeographicCoordinates
         .each("end", function(){
             updateToppingCircles();
         })
-        .duration(2000)
+        .duration(1000)
         .attr("cx", function(d) {
             return projection([targetGeographicCoordinates[0], targetGeographicCoordinates[1]])[0];
         })
@@ -691,3 +536,13 @@ function handleCountryClick(d, i){
 function calculateNewStrokeWidth(scale, normalWidth){
     return (normalWidth / scale).toString();
 }
+
+/* TODO: jos halutaan piirrellä viivoja
+g.append("line")
+    .attr("x1", "0")
+    .attr("y1", "0")
+    .attr("x2", "200")
+    .attr("y2", "200")
+    .attr("stroke", "rgb(255,0,0)")
+    .attr("stroke-width", "2");
+    //.style("stroke:rgb(255,0,0);stroke-width:2");*/
