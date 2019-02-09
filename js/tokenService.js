@@ -49,6 +49,9 @@ const tokenService = {};
      */
     c.getTokensInCountry = function(countryId){
         console.assert(typeof countryId === "number");
+        if(typeof countryId !== "number"){
+            console.log("getTokensInCountry.countryId's type is: ", typeof countryId);
+        }
         return c.tokens.filter(token => token.location === countryId);
     };
 

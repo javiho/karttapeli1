@@ -294,7 +294,7 @@ function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
     Same as getTokenTranslationFromOwnerAndCountry, except tokens are not stacked.
  */
 function getSpreadTokenTranslationByOwnerAndCountry(countryPresentation, token){
-    const tokensPresent = tokenService.getTokensInCountry(countryPresentation.id);
+    const tokensPresent = tokenService.getTokensInCountry(countryPresentation.country.id);
     const slotAmount = tokensPresent.length;
     const slotIndex = getSpreadTokenSlotIndex(tokensPresent, token);
     const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
@@ -406,11 +406,12 @@ function universalClickHandler(event){
                 const countryName = dataForRendering.getCountryNameById(countryId, countryNames); // TODO: mihin tätä tarvitaan?
                 addToken(countryId);
             }else if(event.shiftKey) {
-                const countryEntry = countryData.find(x => x.id === countryId);
+                const countryEntry = countryData.find(x => x.country.id === countryId);
                 console.assert(countryEntry !== undefined);
                 const centroid = countryEntry.centroid;
                 //console.log("country entry:", countryEntry);
                 const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function (d) {
+                    // TODO: for luupissa on max 1 kierros. Bugi?
                     for (let selectedTokenDatum of selectedTokens) {
                         return d.token.id === selectedTokenDatum.token.id;
                     }
@@ -418,7 +419,7 @@ function universalClickHandler(event){
                 // Update model before rendering transition.
                 for (let selectedTokenDatum of selectedTokens) {
                     //console.log("selectedTokenDatum", selectedTokenDatum);
-                    tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.id);
+                    tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
                 }
                 console.log("selectedTokens3Dselection", selectedTokens3Dselection);
                 transitionTokens(selectedTokens3Dselection, centroid);
@@ -456,7 +457,7 @@ function addToken(countryId){
         console.log("countryEntry is undefined");
         return;
     }
-    tokenService.addToken(countryEntry.id, playerService.currentPlayer);
+    tokenService.addToken(countryEntry.country.id, playerService.currentPlayer);
     updateToppingCircles();
 }
 

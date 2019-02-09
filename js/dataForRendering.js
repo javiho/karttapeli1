@@ -16,26 +16,36 @@ const dataForRendering = {};
     };
 
     /*
+    TODO: vanha kuvaus:
     Returns a list of objects like this: {name: string, centroid: [number, number], id: number}
+    TODO: uusi:
+    Returns a list of objects like this: {country: Country, centroid: [number, number]
      */
     c.initializeCountryData = function(topology, centroidData, countryNames){
-        const countryData = [];
+        const countryModelObjects = []; // Array of Country objects.
+        const centroids = []; // Array[Array[int, int]]
         // 252 maan nimeä, mutta 177 topologiahommelia!
-        for(let i = 0; i < topology.length; i++){
+        for(let i = 0; i < topology.length; i++) {
             // topology was in same order and of same length as centroid data.
             const featureEntry = topology[i];
             const centroid = centroidData[i];
             const featureIdNumber = parseInt(featureEntry.id);
             // Some features in the json area -99 and those are not countries.
-            if(featureIdNumber === -99){
+            if (featureIdNumber === -99) {
                 console.log("was -99");
                 continue;
             }
             const countryName = dataForRendering.getCountryNameById(featureIdNumber, countryNames);
+            const newCountryModelObject = new countryService.Country(featureIdNumber, countryName);
+            countryModelObjects.push(newCountryModelObject);
+            centroids.push(centroid);
+        }
+        console.assert(countryModelObjects.length === centroids.length);
+        const countryData = [];
+        for(let i = 0; i < countryModelObjects.length; i++){
             const newCountryEntry = {};
-            newCountryEntry.name = countryName;
-            newCountryEntry.centroid = centroid;
-            newCountryEntry.id = featureIdNumber;
+            newCountryEntry.country = countryModelObjects[i];
+            newCountryEntry.centroid = centroids[i];
             countryData.push(newCountryEntry);
         }
         console.log("countryData:", countryData);
@@ -65,7 +75,7 @@ const dataForRendering = {};
     c.getTextElementData = function(countryData){
         const textElementData = [];
         countryData.forEach(function(countryPresentation){
-            const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+            const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
             const ownersPresent = dataForRendering.getOwnersPresentInCountry(countryPresentation);
             if(tokensInCountry.length > 0){
                 const ownersAndTokenAmounts = dataForRendering.getOwnerTokenAmountsInCountry(countryPresentation); // Map
@@ -89,7 +99,7 @@ const dataForRendering = {};
     Returns an array of Player objects.
      */
     c.getOwnersPresentInCountry = function(countryPresentation){
-        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
         const ownersPresent = [];
         tokensInCountry.forEach(function(token){
             const owner = token.owner;
@@ -104,7 +114,7 @@ const dataForRendering = {};
     Return value: a Map where keys are Players and values are their token amounts in the country.
      */
     c.getOwnerTokenAmountsInCountry = function(countryPresentation){
-        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.id);
+        const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
         const map = new Map();
         tokensInCountry.forEach(function(token){
             const owner = token.owner;
@@ -123,7 +133,7 @@ const dataForRendering = {};
      */
     c.getCountryEntryById = function(countryId, countryData){
         const countryEntry = countryData.find(function(element){
-            return element.id === countryId;
+            return element.country.id === countryId;
         });
         return countryEntry;
     };

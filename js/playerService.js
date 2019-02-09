@@ -1,6 +1,5 @@
 "use strict";
 
-// This object contains functions for life and the abstraction of it's presentation in the view, if you catch my meaning.
 const playerService = {};
 (function(c) {
     // c stands for context.
@@ -14,11 +13,17 @@ const playerService = {};
 
     c.getInitialPlayerData = function(){
         const players = [
-            {id: 8, name: "player1", color: "green"},
-            {id: 9, name: "player2", color: "gold"},
-            {id: 10, name: "player3", color: "aliceblue"}
+            new c.Player(8, "player1", "green"),
+            new c.Player(9, "player2", "gold"),
+            new c.Player(10, "player3", "aliceblue"),
         ];
         return players;
     };
+
+    c.Player = function(id, name, color){
+        this.id = id; // int
+        this.name = name; // string
+        this.color = color; // string, color's name
+    }
 
 })(playerService);
