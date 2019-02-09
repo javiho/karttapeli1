@@ -35,8 +35,6 @@ let centroidData = null;
 // Lista seuraavanlaisia objekteja: { malli-token-objekti, countryData entry }
 let tokenData = [];
 let selectedTokens = [];
-let players = []; // Array of player objects.
-let currentPlayer = null; // A player object
 
 const centroidFill = "rgba(255, 128, 0, 1)";
 const maxZoomScale = 50;
@@ -72,7 +70,7 @@ d3.json("world-110m.json", function(error, topology) {
     d3.tsv("world-country-names.tsv", function(data){
         countryNames = data;
         console.log("country names:", countryNames);
-        initializePlayerData();
+        playerService.initializePlayerData();
         updateCurrentPlayerInfo();
         initializeCountryData(pathDataArray);
         updateCentroidCircles();
@@ -128,20 +126,6 @@ function initializeDocument(){
 
 /*************************** Data for rendering ******************************/
 
-function initializePlayerData(){
-    players = getInitialPlayerData();
-    currentPlayer = players[0];
-}
-
-function getInitialPlayerData(){
-    const players = [
-        {id: 8, name: "player1", color: "green"},
-        {id: 9, name: "player2", color: "gold"},
-        {id: 10, name: "player3", color: "aliceblue"}
-    ];
-    return players;
-}
-
 function initializeCountryData(topology){
     centroidData = dataForRendering.initializeCentroidData(topology);
     countryData = dataForRendering.initializeCountryData(topology, centroidData, countryNames);
@@ -191,7 +175,7 @@ function updateToppingCircles(){
         .attr("data-token-id", function(d){
             return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
         })
-        .style("fill", currentPlayer.color)
+        .style("fill", playerService.currentPlayer.color)
         .attr("r", 10)
         .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
         .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
@@ -267,7 +251,7 @@ function updateTokenStackNumbers(){
 }
 
 function updateCurrentPlayerInfo(){
-    $('#current-player-info').text(currentPlayer.name);
+    $('#current-player-info').text(playerService.currentPlayer.name);
 }
 
 /*
@@ -472,7 +456,7 @@ function addToken(countryId){
         console.log("countryEntry is undefined");
         return;
     }
-    tokenService.addToken(countryEntry.id, currentPlayer);
+    tokenService.addToken(countryEntry.id, playerService.currentPlayer);
     updateToppingCircles();
 }
 
@@ -491,13 +475,14 @@ function transitionTokens(selectedTokens3Dselection, targetGeographicCoordinates
     drawInCorrectOrder();
 }
 
+// TODO: vuoromanageriin tai jonnekin
 function handleNextPlayerTurn(){
-    const currentPlayerIndex = players.findIndex(player => player === currentPlayer);
+    const currentPlayerIndex = playerService.players.findIndex(player => player === playerService.currentPlayer);
     console.assert(currentPlayerIndex > -1);
-    if(currentPlayerIndex === players.length - 1){
-        currentPlayer = players[0];
+    if(currentPlayerIndex === playerService.players.length - 1){
+        playerService.currentPlayer = playerService.players[0];
     }else{
-        currentPlayer = players[currentPlayerIndex + 1];
+        playerService.currentPlayer = playerService.players[currentPlayerIndex + 1];
     }
     updateCurrentPlayerInfo();
 }
