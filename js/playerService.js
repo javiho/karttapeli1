@@ -20,6 +20,24 @@ const playerService = {};
         return players;
     };
 
+    /*
+        Pre-condition: players is an array or Players.
+        Return value: the first one in the order of players.
+     */
+    c.getFirstInOrder = function(players){
+        const playersToIndices = new Map();
+        for(let i = 0; i < c.players.length; i++){
+            for(let j = 0; j < players.length; j++){
+                if(c.players[i] === players[j]){
+                    playersToIndices.set(players[j], i);
+                }
+            }
+        }
+        const playersWithLowestIndex = findKeysWithExtremeValue(playersToIndices, "min");
+        console.assert(playersWithLowestIndex.length === 1);
+        return playersWithLowestIndex[0];
+    };
+
     c.Player = function(id, name, color){
         this.id = id; // int
         this.name = name; // string

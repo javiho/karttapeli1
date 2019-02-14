@@ -18,6 +18,7 @@ const tokenService = {};
     c.addToken = function(locationCountryId, playerId){
         const newToken = c._createToken(locationCountryId, playerId);
         c.tokens.push(newToken);
+        countryService.updateOwner(countryService.getCountryById(locationCountryId));
         return newToken;
     };
 
@@ -37,11 +38,24 @@ const tokenService = {};
         };
     };
 
+    // TODO: eikö voisi ottaa token-objectin eikä id:tä?
     c.moveToken = function(tokenId, newLocationId){
         console.assert(newLocationId !== undefined);
         const token = c.tokens.find(x => x.id === tokenId);
         console.assert(token !== undefined);
+        const currentLocationId = token.location;
+        console.assert(currentLocationId !== undefined);
         token.location = newLocationId;
+        countryService.updateOwner(countryService.getCountryById(currentLocationId));
+        countryService.updateOwner(countryService.getCountryById(newLocationId));
+        /* TODO mihin tätä tarvitaan?
+        const moveTokenEvent = new CustomEvent("moveToken", {
+            detail: {
+                fromCountryId: currentLocationId,
+                toCountryId: newLocationId
+            }
+        });
+        document.dispatchEvent(moveTokenEvent);*/
     };
 
     /*

@@ -49,6 +49,7 @@ const dataForRendering = {};
             countryData.push(newCountryEntry);
         }
         console.log("countryData:", countryData);
+        countryService.countries = countryModelObjects;
         return countryData;
     };
 
@@ -97,6 +98,7 @@ const dataForRendering = {};
 
     /*
     Returns an array of Player objects.
+    // TODO: myös countryServicessä samanlainen
      */
     c.getOwnersPresentInCountry = function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
@@ -112,6 +114,7 @@ const dataForRendering = {};
 
     /*
     Return value: a Map where keys are Players and values are their token amounts in the country.
+    TODO: countryServicessä samanlainen
      */
     c.getOwnerTokenAmountsInCountry = function(countryPresentation){
         const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
