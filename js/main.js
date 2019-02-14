@@ -185,8 +185,8 @@ function updateToppingCircles(){
         })
         .style("fill", playerService.currentPlayer.color)
         .attr("r", 10)
-        .attr("stroke-width", 2) // Not visible if stroke attribute is empty.
-        .attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
+        .attr("stroke-width", 2); // Not visible if stroke attribute is empty.
+        //.attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
     selection
         .attr("cx", function(d) {
             const centroid = d.countryPresentation.centroid;
@@ -217,11 +217,23 @@ function updateToppingCircles(){
             });
             if(!contains){
                 //console.log("wasn't found in selected elements");
-                return ""; // No stroke.
+                return "black"; // No stroke.
             }else{
                 return "red";
             }
+        })
+        .attr("stroke-dasharray", function(d){
+            const contains = selectedTokens.find(function(element){
+                return element.token.id === d.token.id;
+            });
+            if(!contains){
+                //console.log("wasn't found in selected elements");
+                return ""; // No stroke.
+            }else{
+                return "5,5";
+            }
         });
+
     updateTokenStackNumbers();
 }
 
