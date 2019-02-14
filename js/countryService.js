@@ -53,6 +53,13 @@ const countryService = {};
         const appropriateOwner = c.resolveOwner(country);
         country.owner = appropriateOwner;
         console.log("Owner of country:", country, "set to: ", appropriateOwner);
+
+        const countryOwnerChanged = new CustomEvent("countryOwnerChanged", {
+            detail: {
+                newOwner: appropriateOwner
+            }
+        });
+        document.dispatchEvent(countryOwnerChanged);
     };
 
     /*
@@ -93,7 +100,7 @@ const countryService = {};
 
     c.getCountryById = function(countryId){
         const country = c.countries.find(element => element.id === countryId);
-        console.assert(country !== undefined);
+        console.assert(country !== undefined, "countryId:", countryId);
         return country;
     };
 

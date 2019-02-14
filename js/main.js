@@ -37,6 +37,7 @@ let tokenData = [];
 let selectedTokens = [];
 
 const centroidFill = "rgba(255, 128, 0, 1)";
+const ownerlessCountryFill = "#000000";
 const maxZoomScale = 50;
 let tokenStacksByOwner = false;
 let defaultTokenDistanceFromCentroid = 10; //10; // Distance from centroid to token circle's center.
@@ -49,7 +50,12 @@ d3.json("world-110m.json", function(error, topology) {
     const pathDataArray = topojson.feature(topology, topology.objects.countries).features
         // add other stuff to the data in addition to topjson features
         .map(function(element){
-            element.isCountry = true;
+            if(element.id === -99){
+                console.log("pathDataArray: was -99");
+                // Do nothing.
+            }else{
+                element.isCountry = true; // TODO: Mutta eiväthän nämä kaikki ole? esim id: -99
+            }
             return element;
         });// Each element of the array will be datum of an D3/DOM element.
 
@@ -75,6 +81,7 @@ d3.json("world-110m.json", function(error, topology) {
         initializeCountryData(pathDataArray);
         updateCentroidCircles();
         updateToppingCircles();
+        updateCountryColors(null); // Update all country colors to set the initial colors.
     });
 });
 
@@ -113,6 +120,7 @@ svg.call(zoom);
 
 function initializeDocument(){
     document.addEventListener("click", universalClickHandler);
+    document.addEventListener("countryOwnerChanged", updateCountryColors);
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
     document.addEventListener("keyup", function(event){
         console.log("key up:", event.key);
@@ -252,6 +260,26 @@ function updateTokenStackNumbers(){
 
 function updateCurrentPlayerInfo(){
     $('#current-player-info').text(playerService.currentPlayer.name);
+}
+
+function updateCountryColors(event){
+    g.selectAll("path")
+        .attr("fill", function(d){
+            if(d.isCountry){
+                const countryId = d.id;
+                const countryModelObject = countryService.getCountryById(countryId);
+                console.assert(countryId !== undefined);
+                console.assert(countryModelObject.owner !== undefined);
+                let newColor = null;
+                if(countryModelObject.owner == null){
+                    newColor = ownerlessCountryFill;
+                }else{
+                    newColor = countryModelObject.owner.color;
+                }
+                return newColor;
+            }
+            // return undefined
+        });
 }
 
 /*
