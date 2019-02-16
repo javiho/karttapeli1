@@ -39,6 +39,7 @@ let selectedTokens = [];
 const centroidFill = "rgba(255, 128, 0, 1)";
 const ownerlessCountryFill = "#000000";
 const maxZoomScale = 50;
+let zoomScale = 1;
 let tokenStacksByOwner = false;
 let defaultTokenDistanceFromCentroid = 10; //10; // Distance from centroid to token circle's center.
 
@@ -54,7 +55,7 @@ d3.json("world-110m.json", function(error, topology) {
                 console.log("pathDataArray: was -99");
                 // Do nothing.
             }else{
-                element.isCountry = true; // TODO: Mutta eiväthän nämä kaikki ole? esim id: -99
+                element.isCountry = true;
             }
             return element;
         });// Each element of the array will be datum of an D3/DOM element.
@@ -89,6 +90,7 @@ d3.json("world-110m.json", function(error, topology) {
 var zoom = d3.behavior.zoom()
     .on("zoom",function() {
         const newScale = d3.event.scale;
+        zoomScale = newScale;
         const yTranslation = d3.event.translate[1];
         const currentRotation = projection.rotate();
         const longitudeAmount = (d3.event.translate[0] / (width * newScale)) * 360;
@@ -136,7 +138,7 @@ function initializeDocument(){
 
 function initializeCountryData(topology){
     centroidData = dataForRendering.initializeCentroidData(topology);
-    countryData = dataForRendering.initializeCountryData(topology, centroidData, countryNames);
+    countryData = dataForRendering.initializeCountryData(topology, centroidData, countryNames, path);
 }
 
 function updateTokenData(){
@@ -326,7 +328,8 @@ function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
     const slotAmount = ownersWithTokensPresent.length;
     const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
     console.assert(slotIndex > -1 && slotIndex < slotAmount);
-    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
+    const tokenTranslation = calculateTokenTranslation(
+        calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentation), slotAmount, slotIndex);
     return tokenTranslation;
 }
 
@@ -337,7 +340,8 @@ function getSpreadTokenTranslationByOwnerAndCountry(countryPresentation, token){
     const tokensPresent = tokenService.getTokensInCountry(countryPresentation.country.id);
     const slotAmount = tokensPresent.length;
     const slotIndex = getSpreadTokenSlotIndex(tokensPresent, token);
-    const tokenTranslation = calculateTokenTranslation(defaultTokenDistanceFromCentroid, slotAmount, slotIndex);
+    const tokenTranslation = calculateTokenTranslation(
+        calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentation), slotAmount, slotIndex);
     return tokenTranslation;
 }
 
@@ -425,6 +429,17 @@ function calculateTokenTranslation(distanceFromCenter, slotAmount, slotIndex){
     // but it grows downwards with svg elements. So flip y axis.
     y = -y;
     return {x: x, y: y};
+}
+
+function calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentation){
+    /*
+    Olisi jokaisella maalla arvo että kuinka paljon vaatii zoomaamista.
+    Kun zoomataan lähemmäs, distanssi sentroidista kasvaa vaikka:
+    defaultDistance * zoomScale * countryBigness
+     */
+    const countryBigness = dataForRendering.getCountryBigness(countryPresentation);
+    // TODO: taikanumero talteen?
+    return defaultTokenDistanceFromCentroid * Math.pow(zoomScale,0.8) * countryBigness;
 }
 
 /**************************** Update functions ends *************************************/

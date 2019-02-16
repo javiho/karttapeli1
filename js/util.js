@@ -25,3 +25,7 @@ function findKeysWithExtremeValue(map, minOrMax="max"){
     console.assert(maxValueKeys.length > 0 || Array.from(map.values()).length === 0);
     return maxValueKeys;
 }
+
+function getBaseLogatrithm(base, number) {
+    return Math.log(number) / Math.log(base);
+}

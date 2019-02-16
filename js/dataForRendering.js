@@ -21,9 +21,10 @@ const dataForRendering = {};
     TODO: uusi:
     Returns a list of objects like this: {country: Country, centroid: [number, number]
      */
-    c.initializeCountryData = function(topology, centroidData, countryNames){
+    c.initializeCountryData = function(topology, centroidData, countryNames, path){
         const countryModelObjects = []; // Array of Country objects.
         const centroids = []; // Array[Array[int, int]]
+        const areas = []; // Array of numbers.
         // 252 maan nimeä, mutta 177 topologiahommelia!
         for(let i = 0; i < topology.length; i++) {
             // topology was in same order and of same length as centroid data.
@@ -36,16 +37,21 @@ const dataForRendering = {};
                 continue;
             }
             const countryName = dataForRendering.getCountryNameById(featureIdNumber, countryNames);
+            const countryArea = path.area(featureEntry);
             const newCountryModelObject = new countryService.Country(featureIdNumber, countryName);
             countryModelObjects.push(newCountryModelObject);
             centroids.push(centroid);
+            areas.push(countryArea);
         }
         console.assert(countryModelObjects.length === centroids.length);
         const countryData = [];
+        // TODO: myös pinta-alat voisi tässä ympätä mukaan että voidaan arvioida paljonko tokeneilla on tilaa?
+        // Siihen liittyen: https://github.com/d3/d3-geo#path_area
         for(let i = 0; i < countryModelObjects.length; i++){
             const newCountryEntry = {};
             newCountryEntry.country = countryModelObjects[i];
             newCountryEntry.centroid = centroids[i];
+            newCountryEntry.area = areas[i];
             countryData.push(newCountryEntry);
         }
         console.log("countryData:", countryData);
@@ -152,6 +158,16 @@ const dataForRendering = {};
         const name = countryEntry.name;
         console.assert(name !== undefined);
         return name;
+    };
+
+    c.getCountryBigness = function(countryPresentation){
+        // TODO: voi sisältää tarvittaessa maakohtaisia poikkeuksia
+        console.assert(typeof countryPresentation.area === "number");
+        //return getBaseLogatrithm(100, countryPresentation.area);
+        //console.log("area:", countryPresentation.area, "sqrt:",
+        //    Math.sqrt(countryPresentation.area));
+        // TODO: taikanumero talteen?
+        return Math.sqrt(countryPresentation.area) / 30;
     };
 
 })(dataForRendering);
