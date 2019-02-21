@@ -169,7 +169,12 @@ const dataForRendering = {};
         //return getBaseLogatrithm(100, countryPresentation.area);
         //console.log("area:", countryPresentation.area, "sqrt:",
         //    Math.sqrt(countryPresentation.area));
-        // TODO: taikanumero talteen?
+        // TODO: taikanumerot talteen?
+        console.log("area:", countryPresentation.area);
+        if(countryPresentation.area > 6500){
+            console.log("was over 9 million!", countryPresentation);
+            return Math.sqrt(countryPresentation.area) / 60;
+        }
         return Math.sqrt(countryPresentation.area) / 30;
     };
 

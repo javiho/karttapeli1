@@ -50,6 +50,6 @@ function removeFromArray(array, toBeRemoved){
     return array.filter(element => element !== toBeRemoved);
 }
 
-function getBaseLogatrithm(base, number) {
+function getBaseLogarithm(base, number) {
     return Math.log(number) / Math.log(base);
 }
