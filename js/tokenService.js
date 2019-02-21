@@ -34,7 +34,9 @@ const tokenService = {};
         return {
             id: c._generateUniqueId(), // string
             location: countryId,
-            owner: player
+            owner: player,
+            hasStrength: true,
+            isDead: false
         };
     };
 
@@ -56,6 +58,72 @@ const tokenService = {};
             }
         });
         document.dispatchEvent(moveTokenEvent);*/
+    };
+
+    /*
+        Returns an object which describes the result of the battle.
+     */
+    c.resolveBattle = function(attacker, defender){
+        const random = Math.random();
+        const result = {attacker: attacker, defender: defender};
+        if(random < 0.5){
+            // Attacker succeeded
+            result.winner = attacker;
+            result.loser = defender;
+            if(attacker.hasStrength){
+                result.dead = defender;
+            }else{
+                // Attacker can't attack if he doesn't have strength though.
+                result.dead = null;
+            }
+        }else{
+            // Defender succeeded
+            result.winner = defender;
+            result.loser = attacker;
+            if(defender.hasStrength){
+                result.dead = attacker;
+            }else{
+                result.dead = null;
+            }
+        }
+        console.log("Marked for death:", result.dead);
+        return result;
+    };
+
+    /*
+        Pre-condition: battleResult is what c.resolveBattle returns.
+     */
+    c.executeBattle = function(battleResult){
+        battleResult.winner.hasStrength = false;
+        battleResult.loser.hasStrength = false;
+        if(battleResult.dead !== null) {
+            const deadToken = battleResult.dead;
+            deadToken.isDead = true;
+        }
+        const battleOccurredEvent = new CustomEvent("battleOccurred", {
+            detail: {
+                dead: battleResult.dead,
+                attacker: battleResult.attacker,
+                defender: battleResult.defender,
+                winner: battleResult.winner,
+                loser: battleResult.loser
+            }
+        });
+        document.dispatchEvent(battleOccurredEvent);
+    };
+
+    /*
+        Removes token from existence. This is different than killing a token.
+     */
+    c.removeToken = function(token){
+        console.assert(token !== undefined);
+        console.log("tokenService.removeToken:", token);
+        const oldTokensCount = c.tokens.length;
+        console.log("tokens before removal:", c.tokens);
+        c.tokens = removeFromArray(c.tokens, token);
+        console.assert(c.tokens.length < oldTokensCount);
+        console.log("tokens after removal:", c.tokens);
+        countryService.updateOwner(countryService.getCountryById(token.location));
     };
 
     /*

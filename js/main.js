@@ -123,6 +123,8 @@ svg.call(zoom);
 function initializeDocument(){
     document.addEventListener("click", universalClickHandler);
     document.addEventListener("countryOwnerChanged", updateCountryColors);
+    document.addEventListener("battleOccurred", performBattle);
+    initializeKeyPressMonitoring();
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
     document.addEventListener("keyup", function(event){
         console.log("key up:", event.key);
@@ -183,14 +185,18 @@ function updateToppingCircles(){
         .append("circle")
         .attr("class", "topping-circle")
         .attr("data-token-id", function(d){
+            console.log("ENTER KUTSUTTIIN");
             return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
         })
-        .style("fill", playerService.currentPlayer.color)
+        .style("fill", function(d){
+            return d.token.owner.color;
+        })
         .attr("r", 10)
         .attr("stroke-width", 2); // Not visible if stroke attribute is empty.
         //.attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
     selection
         .attr("cx", function(d) {
+            console.log("UPDATE KUTSUTTIIN");
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[0];
         })
@@ -234,7 +240,11 @@ function updateToppingCircles(){
             }else{
                 return "5,5";
             }
+        })
+        .style("fill", function(d){
+            return d.token.owner.color;
         });
+    selection.exit().remove();
 
     updateTokenStackNumbers();
 }
@@ -439,6 +449,7 @@ function calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentati
      */
     const countryBigness = dataForRendering.getCountryBigness(countryPresentation);
     // TODO: taikanumero talteen?
+    // TODO: kun zoomataan todella lähelle, voisi kasvaa lineaarisesti tai exponentiaalisesti.
     return defaultTokenDistanceFromCentroid * Math.pow(zoomScale,0.8) * countryBigness;
 }
 
@@ -487,11 +498,27 @@ function universalClickHandler(event){
             }
         }
         else if(datum.isToken) {
+            console.assert(datum.token !== undefined && datum.countryPresentation !== undefined);
             const tokenId = datum.token.id;
             console.assert(tokenId !== undefined);
             console.log("token clicked:", tokenId);
-            selectedTokens = [];
-            if (!selectedTokens.find(x => datum.token.id === x.token.id)) {
+            const isAnyTokenSelected = selectedTokens.length > 0;
+            const isThisTokenSelected = selectedTokens.find(x => datum.token.id === x.token.id) !== undefined;
+            if(aKeyPressed){
+                if(!isThisTokenSelected && isAnyTokenSelected){
+                    const attacker = selectedTokens[0].token;
+                    const defender = datum.token;
+                    if(attacker.owner === defender.owner){
+                        console.log("Both tokens belong to same player. No battle.");
+                    }else{
+                        const battleResult = tokenService.resolveBattle(attacker, defender);
+                        console.log("battle result:", battleResult);
+                        // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
+                        tokenService.executeBattle(battleResult);
+                    }
+                }
+            }else {
+                selectedTokens = [];
                 selectedTokens.push(datum);
                 console.log("tokenD3", targetD3.datum());
                 updateToppingCircles();
@@ -501,6 +528,87 @@ function universalClickHandler(event){
         selectedTokens = [];
         updateToppingCircles();
     }
+}
+
+function performBattle(event){
+    console.log("performBattle called");
+    const d = event.detail;
+    console.assert(d.attacker !== undefined && d.defender !== undefined && d.dead !== undefined,
+        d.attacker, d.defender, d.dead);
+    /*
+    Ota hyökkääjä ja puolustaja
+    animoi hyökkääjä
+    animoi puolustaja
+    selvitä, kumpi kuoli jos kumpikaan
+    animoi kuolema, jos se tapahtui
+     */
+    const attackerSelection = g.select(".topping-circle[data-token-id=" + d.attacker.id + "]");
+    const defenderSelection = g.select(".topping-circle[data-token-id=" + d.defender.id + "]");
+    if(d.dead === d.attacker){
+        console.log("Attacker will die");
+        // Animate also defender counter-attack.
+        // TODO: transitiot voi laittaa d3:lla jonoon jotenkin.
+        animateTokenAttack(attackerSelection, function(selection1){
+            animateTokenDeath(selection1, function(selection2){
+                tokenService.removeToken(selection2.datum().token);
+                console.log("token removed!");
+                updateToppingCircles();
+                updateTokenStackNumbers();
+            });
+        });
+        animateTokenAttack(defenderSelection);
+    }else if(d.dead === d.defender){
+        console.log("Defender will die");
+        animateTokenAttack(attackerSelection);
+        animateTokenDeath(defenderSelection, function(selection1) {
+            tokenService.removeToken(selection1.datum().token);
+            console.log("token removed!");
+            updateToppingCircles();
+            updateTokenStackNumbers();
+        });
+    }else{
+        // No one died
+        animateTokenAttack(attackerSelection);
+    }
+
+}
+
+function animateTokenAttack(tokenSelection, afterAnimationFunction){
+    const normalRadius = parseInt(tokenSelection.attr("r"));
+    tokenSelection.transition()
+    // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
+        .each("end", function(){
+            //updateToppingCircles();
+            console.log("battle attack transition ended");
+            tokenSelection.attr("r", ""+normalRadius);
+            if(afterAnimationFunction !== undefined){
+                afterAnimationFunction(tokenSelection);
+            }
+        })
+        .duration(1000)
+        .attr("r", function(d) {
+            //console.log(normalRadius);
+            return normalRadius * 2;
+        });
+}
+
+function animateTokenDeath(tokenSelection, afterAnimationFunction){
+    const normalRadius = parseInt(tokenSelection.attr("r"));
+    tokenSelection.transition()
+    // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
+        .each("end", function(){
+            //updateToppingCircles();
+            console.log("token death transition ended");
+            tokenSelection.attr("r", ""+normalRadius);
+            if(afterAnimationFunction !== undefined){
+                afterAnimationFunction(tokenSelection);
+            }
+        })
+        .duration(1000)
+        .attr("r", function(d) {
+            //console.log(normalRadius);
+            return normalRadius * (1/3);
+        });
 }
 
 /*

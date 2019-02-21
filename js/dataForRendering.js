@@ -65,16 +65,18 @@ const dataForRendering = {};
     c.updateTokenData = function(countryData){
         let newTokenData = [];
         tokenService.tokens.forEach(function(element){
-            const tokenModel = element;
-            const countryId = element.location;
-            const countryPresentation = dataForRendering.getCountryEntryById(countryId, countryData);
-            console.assert(countryPresentation !== undefined);
-            const newTokenPresentation = {
-                token: tokenModel,
-                countryPresentation: countryPresentation,
-                isToken: true
-            };
-            newTokenData.push(newTokenPresentation);
+            if(element.isDead === false) {
+                const tokenModel = element;
+                const countryId = element.location;
+                const countryPresentation = dataForRendering.getCountryEntryById(countryId, countryData);
+                console.assert(countryPresentation !== undefined);
+                const newTokenPresentation = {
+                    token: tokenModel,
+                    countryPresentation: countryPresentation,
+                    isToken: true
+                };
+                newTokenData.push(newTokenPresentation);
+            }
         });
         return newTokenData;
     };
@@ -162,6 +164,7 @@ const dataForRendering = {};
 
     c.getCountryBigness = function(countryPresentation){
         // TODO: voi sisältää tarvittaessa maakohtaisia poikkeuksia
+        // TODO: esim saarille voisi laskea todellista suuremman pinta-alan, koska vapaata vesitilaa ympärillä.
         console.assert(typeof countryPresentation.area === "number");
         //return getBaseLogatrithm(100, countryPresentation.area);
         //console.log("area:", countryPresentation.area, "sqrt:",
