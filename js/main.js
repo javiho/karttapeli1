@@ -124,6 +124,7 @@ function initializeDocument(){
     document.addEventListener("click", universalClickHandler);
     document.addEventListener("countryOwnerChanged", updateCountryColors);
     document.addEventListener("battleOccurred", performBattle);
+    document.addEventListener("tokenRemoved", onTokenRemoved);
     initializeKeyPressMonitoring();
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
     document.addEventListener("keyup", function(event){
@@ -184,10 +185,6 @@ function updateToppingCircles(){
     selection.enter()
         .append("circle")
         .attr("class", "topping-circle")
-        .attr("data-token-id", function(d){
-            console.log("ENTER KUTSUTTIIN");
-            return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
-        })
         .style("fill", function(d){
             return d.token.owner.color;
         })
@@ -195,8 +192,10 @@ function updateToppingCircles(){
         .attr("stroke-width", 2); // Not visible if stroke attribute is empty.
         //.attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
     selection
+        .attr("data-token-id", function(d){
+            return d.token.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
+        })
         .attr("cx", function(d) {
-            console.log("UPDATE KUTSUTTIIN");
             const centroid = d.countryPresentation.centroid;
             return projection([centroid[0], centroid[1]])[0];
         })
@@ -649,6 +648,12 @@ function handleNextPlayerTurn(){
         playerService.currentPlayer = playerService.players[currentPlayerIndex + 1];
     }
     updateCurrentPlayerInfo();
+}
+
+function onTokenRemoved(){
+    console.log("onTokenRemoved");
+    updateToppingCircles();
+    updateTokenStackNumbers();
 }
 
 /**************************** User actions ends *************************************/

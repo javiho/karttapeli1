@@ -53,3 +53,10 @@ function removeFromArray(array, toBeRemoved){
 function getBaseLogarithm(base, number) {
     return Math.log(number) / Math.log(base);
 }
+
+function dispatchCustomEvent(eventName, detail){
+    const customEvent = new CustomEvent(eventName, {
+        detail: detail
+    });
+    document.dispatchEvent(customEvent);
+}

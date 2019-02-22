@@ -124,6 +124,7 @@ const tokenService = {};
         console.assert(c.tokens.length < oldTokensCount);
         console.log("tokens after removal:", c.tokens);
         countryService.updateOwner(countryService.getCountryById(token.location));
+        dispatchCustomEvent("tokenRemoved", {token: token});
     };
 
     /*
