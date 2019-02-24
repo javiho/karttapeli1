@@ -15,6 +15,16 @@ const svg = d3.select("#map-holder").append("svg")
     .attr("width", width)
     .attr("height", height)
     .attr("style", 'border-style: solid');
+svg.append("defs");
+/*svg.append("defs").append("pattern")
+    .attr("id", "star")
+    .attr("viewBox", "0,0,10,10")
+    .attr("width", "100%")
+    .attr("height", "100%");
+d3.select("#star").append("polygon")
+    .attr("points", "0,0 10,0 10,10 0,10").attr("fill", "blue");
+d3.select("#star").append("polygon")
+    .attr("points", "0,0 2,5 0,10 5,8 10,10 8,5 10,0 5,2");*/
 const g = svg.append("g");
 
 // path on jonkinlainen objekti joka generoi polun koordinaatit svg:n d-attribuutille sopivaksi.
@@ -42,8 +52,11 @@ const maxZoomScale = 50;
 let zoomScale = 1;
 let tokenStacksByOwner = false;
 let defaultTokenDistanceFromCentroid = 10; //10; // Distance from centroid to token circle's center.
-
-initializeDocument();
+const tokenStates = {
+    default: "defaultState",
+    dead: "dead",
+    noStrength: "noStrength"
+};
 
 // load and display the World
 d3.json("world-110m.json", function(error, topology) {
@@ -83,6 +96,7 @@ d3.json("world-110m.json", function(error, topology) {
         updateCentroidCircles();
         updateToppingCircles();
         updateCountryColors(null); // Update all country colors to set the initial colors.
+        initializeDocument();
     });
 });
 
@@ -126,6 +140,7 @@ function initializeDocument(){
     document.addEventListener("battleOccurred", performBattle);
     document.addEventListener("tokenRemoved", onTokenRemoved);
     initializeKeyPressMonitoring();
+    generateAndAddPatterns(playerService.players)
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
     document.addEventListener("keyup", function(event){
         console.log("key up:", event.key);
@@ -135,6 +150,38 @@ function initializeDocument(){
     });*/
 }
 
+/*
+    Pre-condition: players is an array of Player objects.
+ */
+function generateAndAddPatterns(players){
+    const statesToPolygonPoints = new Map();
+    statesToPolygonPoints.set(tokenStates.noStrength, "2,2 8,2 8,8 2,8");
+    statesToPolygonPoints.set(tokenStates.dead, "0,0 2,5 0,10 5,8 10,10 8,5 10,0 5,2");
+    statesToPolygonPoints.set(tokenStates.default, "");
+    const backgroundPolygonPoints = "0,0 10,0 10,10 0,10";
+    const defs = svg.select("defs");
+    players.forEach(function(player){
+        for(let [state, statePolygonPoints] of statesToPolygonPoints.entries()){
+            const patternId = getTokenPatternId(player, state);
+            const pattern = defs.append("pattern")
+                .attr("id", patternId)
+                .attr("viewBox", "0,0,10,10")
+                .attr("width", "100%")
+                .attr("height", "100%");
+            pattern.append("polygon")
+                .attr("points", backgroundPolygonPoints).attr("fill", player.color);
+            pattern.append("polygon")
+                .attr("points", statePolygonPoints);
+        }
+    });
+}
+
+/*
+    player: Player, state: string
+ */
+function getTokenPatternId(player, state){
+    return player.id + "-" + state;
+}
 
 
 /*************************** Data for rendering ******************************/
@@ -182,12 +229,10 @@ function updateCentroidCircles(){
 function updateToppingCircles(){
     updateTokenData();
     let selection = g.selectAll(".topping-circle").data(tokenData);
+    console.log("updateToppingCircles: selection.size", selection.size());
     selection.enter()
         .append("circle")
         .attr("class", "topping-circle")
-        .style("fill", function(d){
-            return d.token.owner.color;
-        })
         .attr("r", 10)
         .attr("stroke-width", 2); // Not visible if stroke attribute is empty.
         //.attr("stroke-dasharray", "5,5"); // Not visible if stroke attribute is empty.
@@ -241,7 +286,9 @@ function updateToppingCircles(){
             }
         })
         .style("fill", function(d){
-            return d.token.owner.color;
+            // TODO: pitää repäistä tila jostakin
+            return "url(#"+getTokenPatternId(d.token.owner, dataForRendering.getTokenState(d))+")";
+            //return "url(#star)";//d.token.owner.color;
         });
     selection.exit().remove();
 
@@ -558,10 +605,13 @@ function performBattle(event){
         animateTokenAttack(defenderSelection);
     }else if(d.dead === d.defender){
         console.log("Defender will die");
+        console.log("Defender owner:", defenderSelection.datum().token.owner.color);
         animateTokenAttack(attackerSelection);
         animateTokenDeath(defenderSelection, function(selection1) {
+            console.log("Defender death after animation function: selection1.datum().token.owner.color",
+                selection1.datum().token.owner.color);
             tokenService.removeToken(selection1.datum().token);
-            console.log("token removed!");
+            console.log("defender token removed!");
             updateToppingCircles();
             updateTokenStackNumbers();
         });
@@ -593,6 +643,9 @@ function animateTokenAttack(tokenSelection, afterAnimationFunction){
 
 function animateTokenDeath(tokenSelection, afterAnimationFunction){
     const normalRadius = parseInt(tokenSelection.attr("r"));
+    // TODO: Tässä tokenin datum näyttäisi olevan eri kuin alempana kohdassa 2.
+    console.log("animateTokenDeath: tokenSelection.datum().token.owner.color",
+        tokenSelection.datum().token.id);
     tokenSelection.transition()
     // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
         .each("end", function(){
@@ -600,6 +653,9 @@ function animateTokenDeath(tokenSelection, afterAnimationFunction){
             console.log("token death transition ended");
             tokenSelection.attr("r", ""+normalRadius);
             if(afterAnimationFunction !== undefined){
+                // TODO: 2.
+                console.log("animateTokenDeath afterAnimationFunction tokenSelection owner:",
+                    tokenSelection.datum().token.id);
                 afterAnimationFunction(tokenSelection);
             }
         })

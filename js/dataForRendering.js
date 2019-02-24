@@ -64,19 +64,22 @@ const dataForRendering = {};
      */
     c.updateTokenData = function(countryData){
         let newTokenData = [];
+        //console.log("updateTokenData called!---------");
         tokenService.tokens.forEach(function(element){
-            if(element.isDead === false) {
-                const tokenModel = element;
-                const countryId = element.location;
-                const countryPresentation = dataForRendering.getCountryEntryById(countryId, countryData);
-                console.assert(countryPresentation !== undefined);
-                const newTokenPresentation = {
-                    token: tokenModel,
-                    countryPresentation: countryPresentation,
-                    isToken: true
-                };
-                newTokenData.push(newTokenPresentation);
-            }
+            //console.log("updateTokenData.forEach element.owner.color:", element.owner.color);
+            //if(element.isDead === false) {
+            // TODO: jostakin syystä yllä oleva if hajottaa jos updateToppingCircles kesken animaation
+            const tokenModel = element;
+            const countryId = element.location;
+            const countryPresentation = dataForRendering.getCountryEntryById(countryId, countryData);
+            console.assert(countryPresentation !== undefined);
+            const newTokenPresentation = {
+                token: tokenModel,
+                countryPresentation: countryPresentation,
+                isToken: true
+            };
+            newTokenData.push(newTokenPresentation);
+            //}
         });
         return newTokenData;
     };
@@ -176,6 +179,16 @@ const dataForRendering = {};
             return Math.sqrt(countryPresentation.area) / 60;
         }
         return Math.sqrt(countryPresentation.area) / 30;
+    };
+
+    c.getTokenState = function(tokenPresentation){
+        if(tokenPresentation.token.isDead){
+            return tokenStates.dead;
+        }else if(!tokenPresentation.token.hasStrength){
+            return tokenStates.noStrength;
+        }else{
+            return tokenStates.default;
+        }
     };
 
 })(dataForRendering);
