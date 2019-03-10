@@ -66,7 +66,7 @@ const tokenService = {};
     c.resolveBattle = function(attacker, defender){
         const random = Math.random();
         const result = {attacker: attacker, defender: defender};
-        if(random < 1){ // TODO: 0.5
+        if(random < 0.5){
             // Attacker succeeded
             result.winner = attacker;
             result.loser = defender;

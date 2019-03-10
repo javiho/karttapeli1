@@ -229,7 +229,7 @@ function updateCentroidCircles(){
 function updateToppingCircles(){
     updateTokenData();
     let selection = g.selectAll(".topping-circle").data(tokenData);
-    console.log("updateToppingCircles: selection.size", selection.size());
+    //console.log("updateToppingCircles: selection.size", selection.size());
     selection.enter()
         .append("circle")
         .attr("class", "topping-circle")
@@ -533,7 +533,7 @@ function universalClickHandler(event){
                     //console.log("selectedTokenDatum", selectedTokenDatum);
                     tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
                 }
-                console.log("selectedTokens3Dselection", selectedTokens3Dselection);
+                //console.log("selectedTokens3Dselection", selectedTokens3Dselection);
                 transitionTokens(selectedTokens3Dselection, centroid);
                 // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
                 // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
@@ -547,18 +547,20 @@ function universalClickHandler(event){
             console.assert(datum.token !== undefined && datum.countryPresentation !== undefined);
             const tokenId = datum.token.id;
             console.assert(tokenId !== undefined);
-            console.log("token clicked:", tokenId);
+            //console.log("token clicked:", tokenId);
             const isAnyTokenSelected = selectedTokens.length > 0;
             const isThisTokenSelected = selectedTokens.find(x => datum.token.id === x.token.id) !== undefined;
             if(aKeyPressed){
                 if(!isThisTokenSelected && isAnyTokenSelected){
                     const attacker = selectedTokens[0].token;
                     const defender = datum.token;
-                    if(attacker.owner === defender.owner){
+                    if(attacker.hasStrength === false){
+                        console.log("No strength to attack");
+                    }else if(attacker.owner === defender.owner){
                         console.log("Both tokens belong to same player. No battle.");
                     }else{
                         const battleResult = tokenService.resolveBattle(attacker, defender);
-                        console.log("battle result:", battleResult);
+                        //console.log("battle result:", battleResult);
                         // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
                         tokenService.executeBattle(battleResult);
                     }
@@ -577,7 +579,7 @@ function universalClickHandler(event){
 }
 
 function performBattle(event){
-    console.log("performBattle called");
+    //console.log("performBattle called");
     const d = event.detail;
     console.assert(d.attacker !== undefined && d.defender !== undefined && d.dead !== undefined,
         d.attacker, d.defender, d.dead);
@@ -597,7 +599,7 @@ function performBattle(event){
         animateTokenAttack(attackerSelection, function(selection1){
             animateTokenDeath(selection1, function(selection2){
                 tokenService.removeToken(selection2.datum().token);
-                console.log("token removed!");
+                //console.log("token removed!");
                 updateToppingCircles();
                 updateTokenStackNumbers();
             });
@@ -605,19 +607,20 @@ function performBattle(event){
         animateTokenAttack(defenderSelection);
     }else if(d.dead === d.defender){
         console.log("Defender will die");
-        console.log("Defender owner:", defenderSelection.datum().token.owner.color);
+        //console.log("Defender owner:", defenderSelection.datum().token.owner.color);
         animateTokenAttack(attackerSelection);
         animateTokenDeath(defenderSelection, function(selection1) {
-            console.log("Defender death after animation function: selection1.datum().token.owner.color",
-                selection1.datum().token.owner.color);
+            //console.log("Defender death after animation function: selection1.datum().token.owner.color",
+            //    selection1.datum().token.owner.color);
             tokenService.removeToken(selection1.datum().token);
-            console.log("defender token removed!");
+            //console.log("defender token removed!");
             updateToppingCircles();
             updateTokenStackNumbers();
         });
     }else{
         // No one died
         animateTokenAttack(attackerSelection);
+        updateToppingCircles();
     }
 
 }
@@ -628,7 +631,7 @@ function animateTokenAttack(tokenSelection, afterAnimationFunction){
     // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
         .each("end", function(){
             //updateToppingCircles();
-            console.log("battle attack transition ended");
+            //console.log("battle attack transition ended");
             tokenSelection.attr("r", ""+normalRadius);
             if(afterAnimationFunction !== undefined){
                 afterAnimationFunction(tokenSelection);
@@ -644,18 +647,18 @@ function animateTokenAttack(tokenSelection, afterAnimationFunction){
 function animateTokenDeath(tokenSelection, afterAnimationFunction){
     const normalRadius = parseInt(tokenSelection.attr("r"));
     // TODO: Tässä tokenin datum näyttäisi olevan eri kuin alempana kohdassa 2.
-    console.log("animateTokenDeath: tokenSelection.datum().token.owner.color",
-        tokenSelection.datum().token.id);
+    //console.log("animateTokenDeath: tokenSelection.datum().token.owner.color",
+    //    tokenSelection.datum().token.id);
     tokenSelection.transition()
     // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
         .each("end", function(){
             //updateToppingCircles();
-            console.log("token death transition ended");
+            //console.log("token death transition ended");
             tokenSelection.attr("r", ""+normalRadius);
             if(afterAnimationFunction !== undefined){
                 // TODO: 2.
-                console.log("animateTokenDeath afterAnimationFunction tokenSelection owner:",
-                    tokenSelection.datum().token.id);
+                //console.log("animateTokenDeath afterAnimationFunction tokenSelection owner:",
+                //    tokenSelection.datum().token.id);
                 afterAnimationFunction(tokenSelection);
             }
         })
@@ -707,7 +710,7 @@ function handleNextPlayerTurn(){
 }
 
 function onTokenRemoved(){
-    console.log("onTokenRemoved");
+    //console.log("onTokenRemoved");
     updateToppingCircles();
     updateTokenStackNumbers();
 }
