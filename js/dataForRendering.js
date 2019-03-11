@@ -37,7 +37,6 @@ const dataForRendering = {};
 
         Tehdään taulukko, jonka koko on neighborsArrays.length ja jonka elementit ovat indeksejä
         countryModelObjects-tauluun (tai null)
-
          */
         // E.g. [0, null, 1] if neighborsArray == [a, b, c] and countryModelObjects == [a', c']
         // To get element from countryModelObjects corresponding to neighborsArray[i], you access

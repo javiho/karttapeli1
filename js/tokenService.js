@@ -40,6 +40,16 @@ const tokenService = {};
         };
     };
 
+    c.canMoveToken = function(tokenId, newLocationId){
+        // TODO kesken
+        console.assert(newLocationId !== undefined);
+        const token = c.tokens.find(x => x.id === tokenId);
+        console.assert(token !== undefined);
+        const currentLocationId = token.location;
+        console.assert(currentLocationId !== undefined);
+        return countryService.areNeighbors(currentLocationId, newLocationId);
+    };
+
     // TODO: eikö voisi ottaa token-objectin eikä id:tä?
     c.moveToken = function(tokenId, newLocationId){
         console.assert(newLocationId !== undefined);

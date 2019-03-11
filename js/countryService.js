@@ -98,6 +98,17 @@ const countryService = {};
         return map;
     };
 
+    c.areNeighbors = function(country1Id, country2Id){
+        const country1 = c.getCountryById(country1Id);
+        const country2 = c.getCountryById(country2Id);
+        console.assert(country1 !== undefined && country2 !== undefined);
+        const country1NeighborTo2 = country1.neighbors.includes(country2);
+        const country2NeighborTo1 = country2.neighbors.includes(country1);
+        console.assert(country1NeighborTo2 === country2NeighborTo1,
+            "Neighborship should be a two-way relationship.");
+        return country1NeighborTo2;
+    };
+
     c.getCountryById = function(countryId){
         const country = c.countries.find(element => element.id === countryId);
         console.assert(country !== undefined, "countryId:", countryId);

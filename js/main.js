@@ -535,12 +535,16 @@ function universalClickHandler(event){
                 // Update model before rendering transition.
                 for (let selectedTokenDatum of selectedTokens) {
                     //console.log("selectedTokenDatum", selectedTokenDatum);
-                    tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
+                    if(tokenService.canMoveToken(selectedTokenDatum.token.id, countryEntry.country.id)) {
+                        tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
+                        transitionTokens(selectedTokens3Dselection, centroid);
+                        // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
+                        // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
+                    }else{
+                        alert("Can only move to neighboring areas.");
+                    }
                 }
                 //console.log("selectedTokens3Dselection", selectedTokens3Dselection);
-                transitionTokens(selectedTokens3Dselection, centroid);
-                // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
-                // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
             }else{
                 selectedTokens = [];
                 updateToppingCircles();
