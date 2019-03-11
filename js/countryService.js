@@ -108,7 +108,18 @@ const countryService = {};
         this.id = id; // int
         this.name = name; // string
         this.owner = null; // Player object
-        // at least neighbors will be here, or maybe elsewhere
+        this.neighbors = []; // Array of Country objects
+
+        this.addNeighbor = function(neighbor){
+            if(!(neighbor instanceof c.Country)){
+                console.log("ERROR: neighbor:", neighbor);
+                throw Error("neighbor is not a Country.");
+            }else if(this.neighbors.includes(neighbor)){
+                throw Error("Duplicate neighbor.");
+            }else{
+                this.neighbors.push(neighbor);
+            }
+        }
     }
 
 })(countryService);

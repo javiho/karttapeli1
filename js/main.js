@@ -61,6 +61,9 @@ const tokenStates = {
 // load and display the World
 d3.json("world-110m.json", function(error, topology) {
 
+    console.log("topology geometries:", topology.objects.countries.geometries);
+    const neighborsArrays = topojson.neighbors(topology.objects.countries.geometries);
+    console.log("neighbors array:", neighborsArrays);
     const pathDataArray = topojson.feature(topology, topology.objects.countries).features
         // add other stuff to the data in addition to topjson features
         .map(function(element){
@@ -92,7 +95,7 @@ d3.json("world-110m.json", function(error, topology) {
         console.log("country names:", countryNames);
         playerService.initializePlayerData();
         updateCurrentPlayerInfo();
-        initializeCountryData(pathDataArray);
+        initializeCountryData(pathDataArray, neighborsArrays);
         updateCentroidCircles();
         updateToppingCircles();
         updateCountryColors(null); // Update all country colors to set the initial colors.
@@ -186,9 +189,10 @@ function getTokenPatternId(player, state){
 
 /*************************** Data for rendering ******************************/
 
-function initializeCountryData(topology){
+function initializeCountryData(topology, neighborsArrays){
     centroidData = dataForRendering.initializeCentroidData(topology);
-    countryData = dataForRendering.initializeCountryData(topology, centroidData, countryNames, path);
+    countryData = dataForRendering.initializeCountryData(
+        topology, centroidData, countryNames, neighborsArrays, path);
 }
 
 function updateTokenData(){

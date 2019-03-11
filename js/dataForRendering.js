@@ -20,11 +20,34 @@ const dataForRendering = {};
     Returns a list of objects like this: {name: string, centroid: [number, number], id: number}
     TODO: uusi:
     Returns a list of objects like this: {country: Country, centroid: [number, number]
+
+    Pre-condition: element of neighborsArrays has array(s???) of the indices of the neighbors of that
+    elements, where those indices are the indices of neighborsArrays
+    (https://github.com/topojson/topojson-client/blob/master/README.md#neighbors)
      */
-    c.initializeCountryData = function(topology, centroidData, countryNames, path){
+    c.initializeCountryData = function(topology, centroidData, countryNames, neighborsArrays, path){
+        /*
+        Käydään läpi neighborsArrays
+            - etsitään countryModelObjectsista vastaava elementti kuin neighborsArrays[i]
+                - se olkoon c
+                - nyt on lista naapuri-indeksit indekseja jotka viittaavat neighborsArrayhin
+                - käydään läpi se lista
+                    - etsitään countryModelObjectsista vastaava elementti kuin naapuri-indeksit[i]
+                    - lisätään ne c:n naapuriksi
+
+        Tehdään taulukko, jonka koko on neighborsArrays.length ja jonka elementit ovat indeksejä
+        countryModelObjects-tauluun (tai null)
+
+         */
+        // E.g. [0, null, 1] if neighborsArray == [a, b, c] and countryModelObjects == [a', c']
+        // To get element from countryModelObjects corresponding to neighborsArray[i], you access
+        // countryModelObjects[countryModelObjectsIndicesOfNeighborsArrayElements[i]]
+        const countryModelObjectsOfNeighborsArraysIndices = []; // TODO parempi nimi?
+
         const countryModelObjects = []; // Array of Country objects.
         const centroids = []; // Array[Array[int, int]]
         const areas = []; // Array of numbers.
+        let countryModelObjectsIndexCounter = 0;
         // 252 maan nimeä, mutta 177 topologiahommelia!
         for(let i = 0; i < topology.length; i++) {
             // topology was in same order and of same length as centroid data.
@@ -34,6 +57,7 @@ const dataForRendering = {};
             // Some features in the json area -99 and those are not countries.
             if (featureIdNumber === -99) {
                 console.log("was -99");
+                countryModelObjectsOfNeighborsArraysIndices.push(null);
                 continue;
             }
             const countryName = dataForRendering.getCountryNameById(featureIdNumber, countryNames);
@@ -42,8 +66,51 @@ const dataForRendering = {};
             countryModelObjects.push(newCountryModelObject);
             centroids.push(centroid);
             areas.push(countryArea);
+            countryModelObjectsOfNeighborsArraysIndices.push(countryModelObjectsIndexCounter);
+            countryModelObjectsIndexCounter += 1;
         }
         console.assert(countryModelObjects.length === centroids.length);
+
+        // Neighbors can be set only after every Country has been created, since they are Countries.
+        for(let i = 0; i < neighborsArrays.length; i++){
+            if(countryModelObjectsOfNeighborsArraysIndices[i] === null){
+                // There is no corresponding countryObject for this neighborsArray element.
+                continue;
+            }
+            const countryObject = countryModelObjects[countryModelObjectsOfNeighborsArraysIndices[i]];
+            console.assert(countryObject instanceof countryService.Country);
+            // TODO onko siis kaksiulotteinen? (flat ei kyllä haittaa vaikka ei olisikaan)
+            const neighborIndices = neighborsArrays[i].flat();
+            for(let j = 0; j < neighborIndices.length; j++){
+                const indexOfNeighborsArrays = neighborIndices[j];
+                if(countryModelObjectsOfNeighborsArraysIndices[indexOfNeighborsArrays] === null){
+                    // There is no corresponding countryObject for this neighborsArray element.
+                    continue;
+                }
+                const neighborCountryObject = countryModelObjects[
+                    countryModelObjectsOfNeighborsArraysIndices[indexOfNeighborsArrays]
+                ];
+                console.assert(neighborCountryObject instanceof countryService.Country);
+                countryObject.addNeighbor(neighborCountryObject);
+            }
+        }
+        /*for(let i = 0; i < neighborsArrays.length; i++){
+            const featureEntry = topology[i];
+            const featureIdNumber = parseInt(featureEntry.id);
+            for(let j = 0; j < countryModelObjects; j++){
+                if(countryModelObjects[j].id === featureIdNumber){
+                    // TODO onko siis kaksiulotteinen?
+                    const neighborsIndices = neighborsArrays[i].flat();
+                    for(let k = 0; k < neighborsIndices.length; k++){
+                        const neighborFeatureEntry = topology[k];
+                        const neighborFeatureIdNumber = parseInt(neighborFeatureEntry.id);
+                        for(let l = 0; l < countryModelObjects)
+                            // TODO performanssi?
+                    }
+                }
+            }
+        }*/
+
         const countryData = [];
         // TODO: myös pinta-alat voisi tässä ympätä mukaan että voidaan arvioida paljonko tokeneilla on tilaa?
         // Siihen liittyen: https://github.com/d3/d3-geo#path_area
