@@ -7,14 +7,13 @@ const turnService = {};
     c.Phases = {maneuver: "maneuver", battle: "battle"};
     const defaultPhase = c.Phases.maneuver;
 
-    // TODO jäätiin siihen että eventtejä pitää jossakin kuunnella
-
     c.currentTurn = 0;
     c.currentPhase = defaultPhase; // Phases
     c.currentPlayer = null; // Player
 
     c.initializeTurnData = function(){
         const firstPlayer = playerService.getFirstInOrder(playerService.players);
+        console.assert(firstPlayer instanceof playerService.Player);
         c.currentPlayer = firstPlayer;
     };
 

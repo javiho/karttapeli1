@@ -101,6 +101,10 @@ d3.json("world-110m.json", function(error, topology) {
         updateToppingCircles();
         updateCountryColors(null); // Update all country colors to set the initial colors.
         initializeDocument();
+        
+        dispatchCustomEvent("phaseChanged");
+        dispatchCustomEvent("currentPlayerChanged");
+        dispatchCustomEvent("turnChanged");
     });
 });
 
@@ -524,32 +528,13 @@ function universalClickHandler(event){
         if(datum.isCountry) {
             const countryId = datum.id;
             if(event.ctrlKey) {
-                const countryName = dataForRendering.getCountryNameById(countryId, countryNames); // TODO: mihin tätä tarvitaan?
                 addToken(countryId);
             }else if(event.shiftKey) {
-                const countryEntry = countryData.find(x => x.country.id === countryId);
-                console.assert(countryEntry !== undefined);
-                const centroid = countryEntry.centroid;
-                //console.log("country entry:", countryEntry);
-                const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function (d) {
-                    // TODO: for luupissa on max 1 kierros. Bugi?
-                    for (let selectedTokenDatum of selectedTokens) {
-                        return d.token.id === selectedTokenDatum.token.id;
-                    }
-                });
-                // Update model before rendering transition.
-                for (let selectedTokenDatum of selectedTokens) {
-                    //console.log("selectedTokenDatum", selectedTokenDatum);
-                    if(tokenService.canMoveToken(selectedTokenDatum.token.id, countryEntry.country.id)) {
-                        tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
-                        transitionTokens(selectedTokens3Dselection, centroid);
-                        // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
-                        // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
-                    }else{
-                        alert("Can only move to neighboring areas.");
-                    }
+                if(turnService.currentPhase === turnService.Phases.maneuver){
+                    doMoveTokenAction(countryId);
+                }else{
+                    console.log("Can only move in the maneuver phase!");
                 }
-                //console.log("selectedTokens3Dselection", selectedTokens3Dselection);
             }else{
                 selectedTokens = [];
                 updateToppingCircles();
@@ -565,24 +550,15 @@ function universalClickHandler(event){
             const isThisTokenSelected = selectedTokens.find(x => datum.token.id === x.token.id) !== undefined;
             if(aKeyPressed){
                 if(!isThisTokenSelected && isAnyTokenSelected){
-                    const attacker = selectedTokens[0].token;
-                    const defender = datum.token;
-                    if(attacker.hasStrength === false){
-                        console.log("No strength to attack");
-                    }else if(attacker.owner === defender.owner){
-                        console.log("Both tokens belong to same player. No battle.");
+                    if(turnService.currentPhase === turnService.Phases.battle){
+                        doTokenAttackAction(datum);
                     }else{
-                        const battleResult = tokenService.resolveBattle(attacker, defender);
-                        //console.log("battle result:", battleResult);
-                        // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
-                        tokenService.executeBattle(battleResult);
+                        console.log("Can only attack in battle phase.");
                     }
                 }
             }else {
-                selectedTokens = [];
-                selectedTokens.push(datum);
+                doSelectTokenAction(datum);
                 console.log("tokenD3", targetD3.datum());
-                updateToppingCircles();
             }
         }
     }else{
@@ -601,18 +577,59 @@ function buttonClickHandler(event){
     }
 }
 
+function doMoveTokenAction(countryId){
+    const countryEntry = countryData.find(x => x.country.id === countryId);
+    console.assert(countryEntry !== undefined);
+    const centroid = countryEntry.centroid;
+    //console.log("country entry:", countryEntry);
+    const selectedTokens3Dselection = d3.selectAll('.topping-circle').filter(function (d) {
+        // TODO: for luupissa on max 1 kierros. Bugi?
+        for (let selectedTokenDatum of selectedTokens) {
+            return d.token.id === selectedTokenDatum.token.id;
+        }
+    });
+    // Update model before rendering transition.
+    for (let selectedTokenDatum of selectedTokens) {
+        //console.log("selectedTokenDatum", selectedTokenDatum);
+        if(tokenService.canMoveToken(selectedTokenDatum.token.id, countryEntry.country.id)) {
+            tokenService.moveToken(selectedTokenDatum.token.id, countryEntry.country.id);
+            transitionTokens(selectedTokens3Dselection, centroid);
+            // TODO: jostakin syystä jos tässä kutsutaan updateToppingCircles, se keskeyttää transition,
+            // mutta jos sitä kutsutaan muuten transition aikana, se ei keskeytä sitä. Miksi?
+        }else{
+            alert("Can only move to neighboring areas.");
+        }
+    }
+    //console.log("selectedTokens3Dselection", selectedTokens3Dselection);
+}
+
+function doTokenAttackAction(datum){
+    const attacker = selectedTokens[0].token;
+    const defender = datum.token;
+    if(attacker.hasStrength === false){
+        console.log("No strength to attack");
+    }else if(attacker.owner === defender.owner){
+        console.log("Both tokens belong to same player. No battle.");
+    }else{
+        const battleResult = tokenService.resolveBattle(attacker, defender);
+        //console.log("battle result:", battleResult);
+        // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
+        tokenService.executeBattle(battleResult);
+    }
+}
+
+function doSelectTokenAction(datum){
+    selectedTokens = [];
+    selectedTokens.push(datum);
+    updateToppingCircles();
+}
+
 function performBattle(event){
+    // TODO tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
     //console.log("performBattle called");
     const d = event.detail;
     console.assert(d.attacker !== undefined && d.defender !== undefined && d.dead !== undefined,
         d.attacker, d.defender, d.dead);
-    /*
-    Ota hyökkääjä ja puolustaja
-    animoi hyökkääjä
-    animoi puolustaja
-    selvitä, kumpi kuoli jos kumpikaan
-    animoi kuolema, jos se tapahtui
-     */
     const attackerSelection = g.select(".topping-circle[data-token-id=" + d.attacker.id + "]");
     const defenderSelection = g.select(".topping-circle[data-token-id=" + d.defender.id + "]");
     if(d.dead === d.attacker){
