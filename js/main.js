@@ -94,6 +94,7 @@ d3.json("world-110m.json", function(error, topology) {
         countryNames = data;
         console.log("country names:", countryNames);
         playerService.initializePlayerData();
+        turnService.initializeTurnData();
         updateCurrentPlayerInfo();
         initializeCountryData(pathDataArray, neighborsArrays);
         updateCentroidCircles();
@@ -142,6 +143,9 @@ function initializeDocument(){
     document.addEventListener("countryOwnerChanged", updateCountryColors);
     document.addEventListener("battleOccurred", performBattle);
     document.addEventListener("tokenRemoved", onTokenRemoved);
+    document.addEventListener("turnChanged", onTurnChanged);
+    document.addEventListener("phaseChanged", onPhaseChanged);
+    document.addEventListener("currentPlayerChanged", onCurrentPlayerChanged);
     initializeKeyPressMonitoring();
     generateAndAddPatterns(playerService.players)
     /* TODO: jos halutaan tunnistaa muiden kuin shift ym. helposti tunnistettavia näppäimien pohjassapito.
@@ -333,7 +337,7 @@ function updateTokenStackNumbers(){
 }
 
 function updateCurrentPlayerInfo(){
-    $('#current-player-info').text(playerService.currentPlayer.name);
+    $('#current-player-info').text(turnService.currentPlayer.name);
 }
 
 function updateCountryColors(event){
@@ -510,6 +514,7 @@ function calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentati
 /**************************** User actions *************************************/
 
 function universalClickHandler(event){
+    buttonClickHandler(event);
     const target = event.target;
     console.log("event target:");
     console.log(target);
@@ -583,6 +588,16 @@ function universalClickHandler(event){
     }else{
         selectedTokens = [];
         updateToppingCircles();
+    }
+}
+
+function buttonClickHandler(event){
+    if(event.target.id === "next-player-button"){
+        turnService.advanceToNextPlayer();
+    }else if(event.target.id === "next-phase-button"){
+        turnService.advanceToNextPhase();
+    }else if(event.target.id === "next-region-button"){
+        console.log("Nothing here yet");
     }
 }
 
@@ -686,7 +701,7 @@ function addToken(countryId){
         console.log("countryEntry is undefined");
         return;
     }
-    tokenService.addToken(countryEntry.country.id, playerService.currentPlayer);
+    tokenService.addToken(countryEntry.country.id, turnService.currentPlayer);
     updateToppingCircles();
 }
 
@@ -706,6 +721,7 @@ function transitionTokens(selectedTokens3Dselection, targetGeographicCoordinates
 }
 
 // TODO: vuoromanageriin tai jonnekin
+/*
 function handleNextPlayerTurn(){
     const currentPlayerIndex = playerService.players.findIndex(player => player === playerService.currentPlayer);
     console.assert(currentPlayerIndex > -1);
@@ -715,12 +731,24 @@ function handleNextPlayerTurn(){
         playerService.currentPlayer = playerService.players[currentPlayerIndex + 1];
     }
     updateCurrentPlayerInfo();
-}
+}*/
 
 function onTokenRemoved(){
     //console.log("onTokenRemoved");
     updateToppingCircles();
     updateTokenStackNumbers();
+}
+
+function onTurnChanged(){
+    $('#current-turn-info').text(""+turnService.currentTurn);
+}
+
+function onPhaseChanged(){
+    $('#current-phase-info').text(turnService.currentPhase);
+}
+
+function onCurrentPlayerChanged(){
+    $('#current-player-info').text(turnService.currentPlayer.name);
 }
 
 /**************************** User actions ends *************************************/

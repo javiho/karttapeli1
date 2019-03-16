@@ -4,11 +4,11 @@ const playerService = {};
 (function(c) {
     // c stands for context.
     c.players = null; // Array of Player objects.
-    c.currentPlayer = null; // TODO: tämä voisi kuulua vuoromanageriin.
+    // c.currentPlayer = null; // TODO: tämä voisi kuulua vuoromanageriin.
 
     c.initializePlayerData = function(){
         c.players = playerService.getInitialPlayerData();
-        c.currentPlayer = c.players[0];
+        // c.currentPlayer = c.players[0]; -> vuoromanageriin
     };
 
     c.getInitialPlayerData = function(){
