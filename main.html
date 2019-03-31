@@ -34,16 +34,22 @@
 <div id="map-holder" style="margin-left: 50px;"></div>
 <!--<div id="container" style="position: relative; width: 1000px; height: 600px;"></div>-->
 
-<div id="turnInfoDiv">
-    <div>Current player:&nbsp;<span id="current-player-info">(None)</span></div>
-    <div><button id="next-player-button">Next player</button></div>
-    <div>Phase:&nbsp;<span id="current-phase-info">(None)</span></div>
-    <div><button id="next-phase-button">Next phase</button></div>
-    <div>Region:&nbsp;<span id="current-region-info">(None)</span></div>
-    <div><button id="next-region-button">Next region</button></div>
-    <div>Turn:&nbsp;<span id="current-turn-info">(None)</span></div>
+<div class="row">
+    <div id="turnInfoDiv" class="col">
+        <div>Current player:&nbsp;<span id="current-player-info">(None)</span></div>
+        <div><button id="next-player-button">Next player</button></div>
+        <div>Phase:&nbsp;<span id="current-phase-info">(None)</span></div>
+        <div><button id="next-phase-button">Next phase</button></div>
+        <div>Region:&nbsp;<span id="current-region-info">(None)</span></div>
+        <div><button id="next-region-button">Next region</button></div>
+        <div>Turn:&nbsp;<span id="current-turn-info">(None)</span></div>
+    </div>
+    <div id="player-info-div" class="col">
+        <div id="player-info-div-name"></div>
+        <div id="player-info-div-color" class="border border-dark">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+        <div>Resources:&nbsp;<span id="player-info-div-resources"></span></div>
+    </div>
 </div>
-
 <script
         src="https://code.jquery.com/jquery-3.3.1.min.js"
         integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
@@ -74,6 +80,7 @@
 <script src="js/turnService.js"></script>
 <script src="js/countryService.js"></script>
 <script src="js/dataForRendering.js"></script>
+<script src="js/guiUpdater.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

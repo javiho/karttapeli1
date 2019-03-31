@@ -101,7 +101,7 @@ d3.json("world-110m.json", function(error, topology) {
         updateToppingCircles();
         updateCountryColors(null); // Update all country colors to set the initial colors.
         initializeDocument();
-        
+
         dispatchCustomEvent("phaseChanged");
         dispatchCustomEvent("currentPlayerChanged");
         dispatchCustomEvent("turnChanged");
@@ -625,7 +625,7 @@ function doSelectTokenAction(datum){
 }
 
 function performBattle(event){
-    // TODO tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
+    // TODO 20190317 tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
     //console.log("performBattle called");
     const d = event.detail;
     console.assert(d.attacker !== undefined && d.defender !== undefined && d.dead !== undefined,
@@ -766,6 +766,7 @@ function onPhaseChanged(){
 
 function onCurrentPlayerChanged(){
     $('#current-player-info').text(turnService.currentPlayer.name);
+    guiUpdater.updatePlayerInfo();
 }
 
 /**************************** User actions ends *************************************/
