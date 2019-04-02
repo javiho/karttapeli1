@@ -62,6 +62,12 @@ const countryService = {};
         document.dispatchEvent(countryOwnerChanged);
     };
 
+    c.resetCountriesForNewTurn = function(){
+        c.countries.forEach(function(country){
+            country.taxed = false;
+        });
+    };
+
     /*
     Returns an array of Player objects.
     TODO mihin tätä tarvitaan?
@@ -109,6 +115,15 @@ const countryService = {};
         return country1NeighborTo2;
     };
 
+    c.getCountriesByOwner = function(owner){
+        console.assert(owner instanceof playerService.Player);
+        const countriesOfOwner = c.countries.filter(country => country.owner === owner);
+        if(countriesOfOwner < 1){
+            console.warn("countriesOfOwner < 1");
+        }
+        return countriesOfOwner;
+    };
+
     c.getCountryById = function(countryId){
         const country = c.countries.find(element => element.id === countryId);
         console.assert(country !== undefined, "countryId:", countryId);
@@ -120,6 +135,7 @@ const countryService = {};
         this.name = name; // string
         this.owner = null; // Player object
         this.neighbors = []; // Array of Country objects
+        this.taxed = false;
 
         this.addNeighbor = function(neighbor){
             if(!(neighbor instanceof c.Country)){

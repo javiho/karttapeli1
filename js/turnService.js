@@ -4,7 +4,7 @@
 const turnService = {};
 (function(c) {
     // c stands for context.
-    c.Phases = {maneuver: "maneuver", battle: "battle"};
+    c.Phases = {maneuver: "maneuver", battle: "battle", taxation: "taxation"};
     const defaultPhase = c.Phases.maneuver;
 
     c.currentTurn = 0;
@@ -20,6 +20,9 @@ const turnService = {};
     c.advanceToNextPhase = function(){
         if(c.currentPhase === c.Phases.maneuver){
             c.currentPhase = c.Phases.battle;
+            dispatchCustomEvent("phaseChanged");
+        }else if(c.currentPhase === c.Phases.battle){
+            c.currentPhase = c.Phases.taxation;
             dispatchCustomEvent("phaseChanged");
         }else{
             // If we are already in the final phase, advance to the next turn instead, which fires the events.
@@ -42,6 +45,7 @@ const turnService = {};
         c.currentTurn += 1;
         c.currentPhase = defaultPhase;
         c.currentPlayer = playerService.players[0];
+        countryService.resetCountriesForNewTurn();
         dispatchCustomEvent("turnChanged");
         dispatchCustomEvent("phaseChanged");
         dispatchCustomEvent("currentPlayerChanged");

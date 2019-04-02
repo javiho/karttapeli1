@@ -42,6 +42,7 @@ const playerService = {};
         this.id = id; // int
         this.name = name; // string
         this.color = color; // string, color's name
+        this.money = 0;
     }
 
 })(playerService);

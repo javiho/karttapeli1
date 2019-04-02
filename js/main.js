@@ -624,6 +624,20 @@ function doSelectTokenAction(datum){
     updateToppingCircles();
 }
 
+function doTaxationAction(){
+    const currentPlayer = turnService.currentPlayer;
+    const countriesOfCurrentPlayer = countryService.getCountriesByOwner(currentPlayer);
+    const untaxedCountries = countriesOfCurrentPlayer.filter(country => country.taxed === false);
+    const taxedMoney = untaxedCountries.length;
+    console.assert(taxedMoney >= 0 && typeof taxedMoney === "number");
+    console.assert(typeof currentPlayer.money === "number");
+    currentPlayer.money += taxedMoney;
+    untaxedCountries.forEach(function(country){
+        country.taxed = true;
+    });
+    guiUpdater.updatePlayerInfo();
+}
+
 function performBattle(event){
     // TODO 20190317 tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
     //console.log("performBattle called");
@@ -762,10 +776,17 @@ function onTurnChanged(){
 
 function onPhaseChanged(){
     $('#current-phase-info').text(turnService.currentPhase);
+    // Now done automatically, but in the future could require user action, so initiate it in this module.
+    if(turnService.currentPhase === turnService.Phases.taxation){
+        doTaxationAction();
+    }
 }
 
 function onCurrentPlayerChanged(){
     $('#current-player-info').text(turnService.currentPlayer.name);
+    if(turnService.currentPhase === turnService.Phases.taxation){
+        doTaxationAction();
+    }
     guiUpdater.updatePlayerInfo();
 }
 
