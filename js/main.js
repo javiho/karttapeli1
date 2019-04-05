@@ -98,9 +98,10 @@ d3.json("world-110m.json", function(error, topology) {
         updateCurrentPlayerInfo();
         initializeCountryData(pathDataArray, neighborsArrays);
         updateCentroidCircles();
-        updateToppingCircles();
         updateCountryColors(null); // Update all country colors to set the initial colors.
         initializeDocument();
+        initializeInitialPlayerPresences();
+        updateToppingCircles();
 
         dispatchCustomEvent("phaseChanged");
         dispatchCustomEvent("currentPlayerChanged");
@@ -528,7 +529,11 @@ function universalClickHandler(event){
         if(datum.isCountry) {
             const countryId = datum.id;
             if(event.ctrlKey) {
-                addToken(countryId);
+                if(turnService.currentPhase === turnService.Phases.taxation){
+                    doPurchaseTokenAction(countryId);
+                }else{
+                    console.log("Can only pucrchase in the taxation phase!");
+                }
             }else if(event.shiftKey) {
                 if(turnService.currentPhase === turnService.Phases.maneuver){
                     doMoveTokenAction(countryId);
@@ -574,6 +579,22 @@ function buttonClickHandler(event){
         turnService.advanceToNextPhase();
     }else if(event.target.id === "next-region-button"){
         console.log("Nothing here yet");
+    }
+}
+
+function doPurchaseTokenAction(countryId){
+    const country = countryService.getCountryById(countryId);
+    const currentPlayer = turnService.currentPlayer;
+    const playerOwnsCountry = country.owner === currentPlayer;
+    const playerHasMoney = currentPlayer.money >= tokenService.tokenPrice;
+    if(!playerOwnsCountry){
+        alert("Can only buy tokens in own territory.");
+    }else if(!playerHasMoney){
+        alert("Not enough money. Must have "+tokenService.tokenPrice+".");
+    }else{
+        currentPlayer.money -= tokenService.tokenPrice;
+        addToken(countryId);
+        guiUpdater.updatePlayerInfo();
     }
 }
 
@@ -791,6 +812,26 @@ function onCurrentPlayerChanged(){
 }
 
 /**************************** User actions ends *************************************/
+
+
+
+/**************************** Game content related initialization *************************************/
+
+function initializeInitialPlayerPresences(){
+    // TODO laita tookkenit ennalta määrättyihin maihin, aseta maille omistajat
+    const playerHomeCountries = new Map();
+    playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(32)]);
+    playerHomeCountries.set(playerService.players[1], [countryService.getCountryById(76)]);
+    playerHomeCountries.set(playerService.players[2], [countryService.getCountryById(218)]);
+    for(let [player, countries] of playerHomeCountries){
+        countries.forEach(function(country){
+            console.log("player:", player);
+            tokenService.addToken(country.id, player);
+        });
+    }
+}
+
+/**************************** Game content related initialization ends*************************************/
 
 
 

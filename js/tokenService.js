@@ -6,6 +6,7 @@ const tokenService = {};
     // c stands for context.
 
     c.tokens = [];
+    c.tokenPrice = 2;
     //c.countryIdToTokenIds = null;
 
     c.initialize = function(){
@@ -15,8 +16,9 @@ const tokenService = {};
         });*/
     };
 
-    c.addToken = function(locationCountryId, playerId){
-        const newToken = c._createToken(locationCountryId, playerId);
+    c.addToken = function(locationCountryId, player){
+        console.assert(player instanceof playerService.Player);
+        const newToken = c._createToken(locationCountryId, player);
         c.tokens.push(newToken);
         countryService.updateOwner(countryService.getCountryById(locationCountryId));
         return newToken;
