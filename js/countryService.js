@@ -52,7 +52,7 @@ const countryService = {};
     c.updateOwner = function(country){
         const appropriateOwner = c.resolveOwner(country);
         country.owner = appropriateOwner;
-        console.log("Owner of country:", country, "set to: ", appropriateOwner);
+        //console.log("Owner of country:", country, "set to: ", appropriateOwner);
 
         const countryOwnerChanged = new CustomEvent("countryOwnerChanged", {
             detail: {

@@ -227,7 +227,7 @@ const dataForRendering = {};
             console.log("getCountryNameById: idNumber:", idNumber);
         }
         const name = countryEntry.name;
-        console.assert(name !== undefined);
+        console.assert(name !== undefined, "name !== undefined, idNumber: "+idNumber);
         return name;
     };
 
