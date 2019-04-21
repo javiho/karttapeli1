@@ -58,6 +58,7 @@ const tokenStates = {
     dead: "dead",
     noStrength: "noStrength"
 };
+const seaCountryIdStart = 10000; // ids >= seaCountryIdStart are for sea "countries"
 
 /*
     Pre-condition: objects is like this:
@@ -81,12 +82,36 @@ function invertCoordinateOrder(objects){
     });
 }
 
+function replaceWithSmallerEquivalentLongitudes(objects){
+    objects.forEach(function(object){
+        object.geometry.coordinates.forEach(function(coordinatesArray){
+            // coordinatesArray is an array of coordinate pairs
+            coordinatesArray.forEach(function(coordinatePair){
+                const longitude = coordinatePair[0];
+                const maxLongitude = 180;
+                const minLongitude = -180;
+                const revolution = 360;
+                let newLongitude = longitude;
+                if(longitude >= maxLongitude){
+                    newLongitude = longitude - revolution;
+                }else if(longitude <= minLongitude){
+                    newLongitude = longitude + revolution;
+                }
+                coordinatePair[0] = newLongitude;
+            });
+        });
+    });
+}
+
 // load and display the World
 d3.json("world-110m.json", function(error, topology) {
-    d3.json("merialueet1.topojson", function(error, sea_topology){
+    d3.json("merialueet2.topojson", function(error, sea_topology){
         console.log("error:", error);
         //console.log("sea_topology", sea_topology);
         console.log("sea_topology.objects.collection.geometries", sea_topology.objects.collection.geometries);
+
+        // topojson.feature returns the GeoJSON Feature or FeatureCollection
+        // for the specified object in the given topology.
         const seaPathDataArray = topojson.feature(sea_topology, sea_topology.objects.collection).features
             .map(function(element){
                 element.isSea = true;
@@ -94,7 +119,16 @@ d3.json("world-110m.json", function(error, topology) {
                 return element;
             });
         console.log("seaPathDataArray", seaPathDataArray);
+        /*console.log("---------------");
+        const p1 = seaPathDataArray[0];
+        const p2 = seaPathDataArray[4];
+        console.log("p1", p1);
+        console.log("p2", p2);
+        const intersection = turf.intersect(p1, p2);
+        console.log("intersection:", intersection);
+        console.log("---------------");*/
         invertCoordinateOrder(seaPathDataArray);
+        replaceWithSmallerEquivalentLongitudes(seaPathDataArray)
         console.log("inverted coordinates seaPathDataArray", seaPathDataArray);
 
         console.log("topology geometries:", topology.objects.countries.geometries);
@@ -871,7 +905,8 @@ function onCurrentPlayerChanged(){
 function initializeInitialPlayerPresences(){
     // TODO laita tookkenit ennalta määrättyihin maihin, aseta maille omistajat
     const playerHomeCountries = new Map();
-    playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(32)]);
+    //playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(32)]);
+    playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(643)]);
     playerHomeCountries.set(playerService.players[1], [countryService.getCountryById(76)]);
     playerHomeCountries.set(playerService.players[2], [countryService.getCountryById(218)]);
     for(let [player, countries] of playerHomeCountries){

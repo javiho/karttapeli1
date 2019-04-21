@@ -135,6 +135,7 @@ const countryService = {};
         this.name = name; // string
         this.owner = null; // Player object
         this.neighbors = []; // Array of Country objects
+        this.isSea = null; // boolean
         this.taxed = false;
 
         this.addNeighbor = function(neighbor){
