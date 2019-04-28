@@ -136,6 +136,8 @@ const dataForRendering = {};
     /*
         Pre-condition: pathDataArray[i] corresponds to countries[i]. countries are Country objects.
         pathDataArray and countries contains land and sea countries.
+
+        Only add neighbor relationship where at least one party is a sea region.
      */
     c.addNeighborsByOverlap = function(pathDataArray, countries){
         console.assert(pathDataArray.length === countries.length);
@@ -155,7 +157,7 @@ const dataForRendering = {};
                             // turf.intersect returns null if there is no intersection, otherwise something else.
                             intersection = turf.intersect(polygon1, polygon2);
                         }catch(e){
-                            console.log("Determining intersection failed for:", country1.name, country2.name);
+                            //console.log("Determining intersection failed for:", country1.name, country2.name);
                             continue;
                         }
                         shouldBeNeighbors = intersection !== null;
@@ -169,8 +171,8 @@ const dataForRendering = {};
                                 // turf.intersect returns null if there is no intersection, otherwise something else.
                                 intersection = turf.intersect(partPolygon, polygon2);
                             }catch(e){
-                                console.log("Determining part polygon intersection failed for:",
-                                    country1.name, country2.name);
+                                //console.log("Determining part polygon intersection failed for:",
+                                //    country1.name, country2.name);
                                 //console.log(e);
                                 //console.log("polygon1 part:", partPolygon);
                                 continue;
@@ -180,7 +182,6 @@ const dataForRendering = {};
                                 break;
                             }
                         }
-                        // TODO KESKEN: laske intersectio kullekin ja päättele siitä naapuruus
                     }else if(polygon2.geometry.type === "MultiPolygon"){
                         // Only handle the MultiPolygon case for polygon1, because each country is inspected
                         // twice in this method so every one gets to be polygon1,
@@ -198,51 +199,16 @@ const dataForRendering = {};
                     if(shouldBeNeighbors){
                         if(!country1.neighbors.includes(country2)){
                             country1.addNeighbor(country2);
-                            console.log("neighbors:", country1.name, country2.name);
+                            //console.log("neighbors:", country1.name, country2.name);
                         }
                         if(!country2.neighbors.includes(country1)){
                             country2.addNeighbor(country1);
-                            console.log("neighbors:", country1.name, country2.name);
+                            //console.log("neighbors:", country1.name, country2.name);
                         }
                     }
                 }
             }
         }
-        // TODO pistettävä samaan pääluuppiin multipolygonitkin
-        /*
-        // Handle MultiPolygons separately
-        for(let i = 0; i < pathDataArray.length; i++){
-            const polygon1 = pathDataArray[i];
-            for(let j = 0; j < pathDataArray.length; j++){
-                const polygon2 = pathDataArray[j];
-                if(polygon1 !== polygon2){
-                    const country1 = countries[i];
-                    const country2 = countries[j];
-                    let intersection;
-                    try {
-                        intersection = turf.intersect(polygon1, polygon2);
-                        // turf.intersect returns null if there is no intersection, otherwise something else.
-                    }catch(e){
-                        console.log("Determining intersection failed for:", country1.name, country2.name);
-                        continue;
-                    }
-                    const shouldBeNeighbors = intersection !== null;
-                    //console.log("shouldBeNeighbors:", polygon1, polygon2, shouldBeNeighbors);
-                    if(shouldBeNeighbors){
-
-                        if(!country1.neighbors.includes(country2)){
-                            country1.addNeighbor(country2);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                        if(!country2.neighbors.includes(country1)){
-                            country2.addNeighbor(country1);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                    }
-                }
-            }
-        }*/
-
     };
 
     /*
