@@ -37,7 +37,7 @@ const path = d3.geo.path()
     Lista seuraavanlaisia objecteja: maan nimi, sentroidipituus- ja leveys, maan id.
  */
 let countryData = [];
-let countryNames = null;
+//let countryNames = null;
 let centroidData = null;
 
 // TODO: tämä pitäisi hommata modelista niin, että otetaan sijaintimaa.sentroidi
@@ -72,6 +72,7 @@ const seaCountryIdStart = 10000; // ids >= seaCountryIdStart are for sea "countr
         ]}},
         ...
     ]
+    TODO ei käytössä uudella datalla
 */
 function invertCoordinateOrder(objects){
     objects.forEach(function(object){
@@ -82,6 +83,7 @@ function invertCoordinateOrder(objects){
     });
 }
 
+// TODO ei käytössä uudella datalla
 function replaceWithSmallerEquivalentLongitudes(objects){
     objects.forEach(function(object){
         object.geometry.coordinates.forEach(function(coordinatesArray){
@@ -104,82 +106,105 @@ function replaceWithSmallerEquivalentLongitudes(objects){
 }
 
 // load and display the World
-d3.json("world-110m.json", function(error, topology) {
-    d3.json("merialueet2.topojson", function(error, sea_topology){
-        console.log("error:", error);
-        //console.log("sea_topology", sea_topology);
-        console.log("sea_topology.objects.collection.geometries", sea_topology.objects.collection.geometries);
+//d3.json("world-110m.json", function(error, topology) {
+d3.json("kartta8.topojson", function(error, topology) {
+    console.log("error:", error);
+    console.log("topology.objects.kartta2.geometries", topology.objects.kartta2.geometries);
+    console.log("topojson.feature(topology, topology.objects.kartta2).features",
+        topojson.feature(topology, topology.objects.kartta2).features);
 
-        // topojson.feature returns the GeoJSON Feature or FeatureCollection
-        // for the specified object in the given topology.
-        const seaPathDataArray = topojson.feature(sea_topology, sea_topology.objects.collection).features
-            .map(function(element){
+    // topojson.feature returns the GeoJSON Feature or FeatureCollection
+    // for the specified object in the given topology.
+    const pathDataArray = topojson.feature(topology, topology.objects.kartta2).features
+        .map(function(element){
+            const prop = element.properties;
+            element.id = prop.unique_id;
+            if(!(prop.featurecla === "Admin-0 country")){
                 element.isSea = true;
-                element.isCountry = true; // Both sea and land regions are called countries.
-                return element;
-            });
-        console.log("seaPathDataArray", seaPathDataArray);
-        /*console.log("---------------");
-        const p1 = seaPathDataArray[0];
-        const p2 = seaPathDataArray[4];
-        console.log("p1", p1);
-        console.log("p2", p2);
-        const intersection = turf.intersect(p1, p2);
-        console.log("intersection:", intersection);
-        console.log("---------------");*/
-        invertCoordinateOrder(seaPathDataArray);
-        replaceWithSmallerEquivalentLongitudes(seaPathDataArray)
-        console.log("inverted coordinates seaPathDataArray", seaPathDataArray);
-
-        console.log("topology geometries:", topology.objects.countries.geometries);
-        const neighborsArrays = topojson.neighbors(topology.objects.countries.geometries);
-        console.log("neighbors array:", neighborsArrays);
-        let pathDataArray = topojson.feature(topology, topology.objects.countries).features
-            // add other stuff to the data in addition to topojson features
-            .map(function(element){
-                if(element.id === -99){
-                    console.log("pathDataArray: was -99");
-                    // Do nothing.
+            }
+            if(prop.split_name === null){
+                if(element.isSea){
+                    element.name = "Sea region "+element.id;
                 }else{
-                    element.isCountry = true;
+                    element.name = prop.SOVEREIGNT;
                 }
-                return element;
-            });// Each element of the array will be datum of an D3/DOM element.
-
-        pathDataArray = pathDataArray.concat(seaPathDataArray);
-        console.log("pathDataArray:", pathDataArray);
-        g.selectAll("path")
-            .data(pathDataArray)
-            .enter()
-            .append("path")
-            .attr("d", path)
-            .attr("fill", function(d){
-                return d.isSea ? seaFill : ownerlessCountryFill;
-            })
-            .attr("stroke", "red")
-            .attr("stroke-width", "1");
-            //.on("click", handleCountryClick); This is replaced with universal click handler.
-
-        // TODO: mihin tätä käytetään?
-        //var countries = topojson.feature(topology, topology.objects.countries).features;
-
-        d3.tsv("world-country-names.tsv", function(data){
-            countryNames = data;
-            console.log("country names:", countryNames);
-            playerService.initializePlayerData();
-            turnService.initializeTurnData();
-            updateCurrentPlayerInfo();
-            initializeCountryData(pathDataArray, neighborsArrays);
-            updateCentroidCircles();
-            updateCountryColors(null); // Update all country colors to set the initial colors.
-            initializeDocument();
-            initializeInitialPlayerPresences();
-            updateToppingCircles();
-
-            dispatchCustomEvent("phaseChanged");
-            dispatchCustomEvent("currentPlayerChanged");
-            dispatchCustomEvent("turnChanged");
+            }else{
+                element.name = prop.split_name;
+            }
+            element.isCountry = true; // Both sea and land regions are called countries.
+            return element;
         });
+    console.log("pathDataArray", pathDataArray);
+
+    const ids = pathDataArray.map(entry => entry.id);
+    console.assert(areAllUnique(ids), "Country ids contain duplicates", countElements(ids));
+    /*console.log("---------------");
+    const p1 = seaPathDataArray[0];
+    const p2 = seaPathDataArray[4];
+    console.log("p1", p1);
+    console.log("p2", p2);
+    const intersection = turf.intersect(p1, p2);
+    console.log("intersection:", intersection);
+    console.log("---------------");*/
+    //invertCoordinateOrder(seaPathDataArray);
+    //replaceWithSmallerEquivalentLongitudes(seaPathDataArray)
+    //console.log("inverted coordinates seaPathDataArray", seaPathDataArray);
+    //invertCoordinateOrder(pathDataArray);
+    //replaceWithSmallerEquivalentLongitudes(pathDataArray)
+    //console.log("inverted coordinates pathDataArray", pathDataArray);
+
+
+    //console.log("topology geometries:", topology.objects.countries.geometries);
+    const neighborsArrays = topojson.neighbors(topology.objects.kartta2.geometries);
+    console.log("neighbors array:", neighborsArrays);
+    /*let pathDataArray = topojson.feature(topology, topology.objects.kartta2).features
+        // add other stuff to the data in addition to topojson features
+        .map(function(element){
+            if(element.id === -99){
+                console.log("pathDataArray: was -99");
+                // Do nothing.
+            }else{
+                element.isCountry = true;
+            }
+            return element;
+        });// Each element of the array will be datum of an D3/DOM element.
+    */
+
+    //pathDataArray = pathDataArray.concat(seaPathDataArray);
+    //console.log("pathDataArray:", pathDataArray);
+    g.selectAll("path")
+        .data(pathDataArray)
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", function(d){
+            return d.isSea ? seaFill : ownerlessCountryFill;
+        })
+        .attr("stroke", "red")
+        .attr("stroke-width", "1");
+        //.on("click", handleCountryClick); This is replaced with universal click handler.
+
+    // TODO: mihin tätä käytetään?
+    //var countries = topojson.feature(topology, topology.objects.countries).features;
+
+    // TODO: TÄHÄN JÄÄTIIN 21.6.2019
+    // TODO: ei tarvita enää nimitiedostoa
+    d3.tsv("world-country-names.tsv", function(data){
+        //countryNames = data;
+        //console.log("country names:", countryNames);
+        playerService.initializePlayerData();
+        turnService.initializeTurnData();
+        updateCurrentPlayerInfo();
+        initializeCountryData(pathDataArray, neighborsArrays);
+        updateCentroidCircles();
+        updateCountryColors(null); // Update all country colors to set the initial colors.
+        initializeDocument();
+        initializeInitialPlayerPresences();
+        updateToppingCircles();
+
+        dispatchCustomEvent("phaseChanged");
+        dispatchCustomEvent("currentPlayerChanged");
+        dispatchCustomEvent("turnChanged");
     });
 });
 
@@ -275,7 +300,7 @@ function getTokenPatternId(player, state){
 function initializeCountryData(topology, neighborsArrays){
     centroidData = dataForRendering.initializeCentroidData(topology);
     countryData = dataForRendering.initializeCountryData(
-        topology, centroidData, countryNames, neighborsArrays, path);
+        topology, centroidData, neighborsArrays, path);
 }
 
 function updateTokenData(){
@@ -290,6 +315,7 @@ function updateTokenData(){
 /****************************Update functions *************************************/
 
 function updateCentroidCircles(){
+    //console.log("centroidData:", centroidData);
     const extendedCentroidData = centroidData.map(function(element){
         const centroidEntry = {centroid: element};
         centroidEntry.isCentroid = true;
@@ -304,6 +330,12 @@ function updateCentroidCircles(){
     selection
         .attr("cx", function(d) {
             const centroid = d.centroid;
+            if(isNaN(centroid[0])){
+                console.log("NaN centroid's data:", d);
+            }
+            //console.log("centroid:", centroid );
+            //console.log("projection([centroid[0], centroid[1]])[0]",
+            //    projection([centroid[0], centroid[1]])[0]);
             return projection([centroid[0], centroid[1]])[0];
         })
         .attr("cy", function(d) {
@@ -906,9 +938,9 @@ function initializeInitialPlayerPresences(){
     // TODO laita tookkenit ennalta määrättyihin maihin, aseta maille omistajat
     const playerHomeCountries = new Map();
     //playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(32)]);
-    playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(643)]);
-    playerHomeCountries.set(playerService.players[1], [countryService.getCountryById(76)]);
-    playerHomeCountries.set(playerService.players[2], [countryService.getCountryById(218)]);
+    playerHomeCountries.set(playerService.players[0], [countryService.getCountryById(273)]);
+    playerHomeCountries.set(playerService.players[1], [countryService.getCountryById(190)]);
+    playerHomeCountries.set(playerService.players[2], [countryService.getCountryById(192)]);
     for(let [player, countries] of playerHomeCountries){
         countries.forEach(function(country){
             console.log("player:", player);

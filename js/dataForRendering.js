@@ -25,7 +25,7 @@ const dataForRendering = {};
     elements, where those indices are the indices of neighborsArrays
     (https://github.com/topojson/topojson-client/blob/master/README.md#neighbors)
      */
-    c.initializeCountryData = function(topology, centroidData, countryNames, neighborsArrays, path){
+    c.initializeCountryData = function(topology, centroidData, neighborsArrays, path){
         /*
         Käydään läpi neighborsArrays
             - etsitään countryModelObjectsista vastaava elementti kuin neighborsArrays[i]
@@ -59,12 +59,16 @@ const dataForRendering = {};
                 countryModelObjectsOfNeighborsArraysIndices.push(null);
                 continue;
             }
-            const countryName = dataForRendering.getCountryNameById(featureIdNumber, countryNames);
+            //const countryName = dataForRendering.getCountryNameById(featureIdNumber, countryNames);
+            //                         |
+            //                         v
+            const countryName = featureEntry.name;
+            console.assert(countryName !== undefined);
             const countryArea = path.area(featureEntry);
             const newCountryModelObject = new countryService.Country(featureIdNumber, countryName);
             // Country id determines if it's sea or land.
             // TODO: constantit jotenkin selkeämmin globaaleja constantteja
-            newCountryModelObject.isSea = featureIdNumber >= seaCountryIdStart;
+            //newCountryModelObject.isSea = featureIdNumber >= seaCountryIdStart;
             countryModelObjects.push(newCountryModelObject);
             centroids.push(centroid);
             areas.push(countryArea);
@@ -99,7 +103,7 @@ const dataForRendering = {};
 
         //TODO: pitää lisätä erikseen merialueiden naapuritiedot, sekä merialueille että maille
         const topologyWithoutMinus99Features = topology.filter(feature => feature.id !== -99);
-        c.addNeighborsByOverlap(topologyWithoutMinus99Features, countryModelObjects);
+        //c.addNeighborsByOverlap(topologyWithoutMinus99Features, countryModelObjects);
 
         /*for(let i = 0; i < neighborsArrays.length; i++){
             const featureEntry = topology[i];

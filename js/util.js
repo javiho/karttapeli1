@@ -50,6 +50,28 @@ function removeFromArray(array, toBeRemoved){
     return array.filter(element => element !== toBeRemoved);
 }
 
+/*
+    Returns a Map where key is an element of array and value is how many times it's found in array.
+ */
+function countElements(array){
+    const occurrencesMap = new Map();
+    array.forEach(function(e1){
+        let occurrences = 0;
+        array.forEach(function(e2){
+            if(e1 === e2){
+                occurrences += 1;
+            }
+        });
+        occurrencesMap.set(e1, occurrences);
+    });
+    return occurrencesMap;
+}
+
+function areAllUnique(array){
+    const asSet = new Set(array);
+    return asSet.size === array.length;
+}
+
 function getBaseLogarithm(base, number) {
     return Math.log(number) / Math.log(base);
 }
