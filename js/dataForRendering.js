@@ -297,6 +297,31 @@ const dataForRendering = {};
         return textElementData;
     };
 
+    c.getBattleLineData = function(){
+        console.assert(false, "Ei käytössä");
+        // TODO: EI tarvittane?
+        const textElementData = [];
+        countryData.forEach(function(countryPresentation){
+            const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
+            const ownersPresent = dataForRendering.getOwnersPresentInCountry(countryPresentation);
+            if(tokensInCountry.length > 0){
+                const ownersAndTokenAmounts = dataForRendering.getOwnerTokenAmountsInCountry(countryPresentation); // Map
+                ownersPresent.forEach(function(owner){
+                    const newTextElementEntry = {
+                        countryPresentation: countryPresentation,
+                        lon: countryPresentation.centroid[0],
+                        lat: countryPresentation.centroid[1],
+                        amountOfTokens: ownersAndTokenAmounts.get(owner),
+                        owner: owner, // The owner of those tokens of which amount this text element displays.
+                        isLabel: true
+                    };
+                    textElementData.push(newTextElementEntry);
+                });
+            }
+        });
+        return textElementData;
+    };
+
     /*
     Returns an array of Player objects.
     // TODO: myös countryServicessä samanlainen

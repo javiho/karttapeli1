@@ -139,6 +139,11 @@ const tokenService = {};
         dispatchCustomEvent("tokenRemoved", {token: token});
     };
 
+    c.returnStrengthToTokens = function(){
+        c.tokens.forEach(token => token.hasStrength = true);
+        console.assert(c.tokens.every(token => token.hasStrength)); //TODO: poista
+    };
+
     /*
     Pre-condition: countryId is a number.
      */
@@ -148,6 +153,16 @@ const tokenService = {};
             console.log("getTokensInCountry.countryId's type is: ", typeof countryId);
         }
         return c.tokens.filter(token => token.location === countryId);
+    };
+
+    // TODO: pitäisi olla joku constructori että voisi käyttää instanceof ja tämä olisi turha.
+    // Ellei ole jo mahdollista tehdä niin.
+    c.isToken = function(possibleToken){
+        const requiredAttributes = ["id", "owner", "location", "hasStrength"];
+        const isToken = requiredAttributes.every(function(attribute){
+            return possibleToken.hasOwnProperty(attribute);
+        });
+        return isToken;
     };
 
     c._generateUniqueId = function(){

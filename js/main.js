@@ -46,6 +46,11 @@ let centroidData = null;
 let tokenData = [];
 let selectedTokens = [];
 
+/*
+    Lista seuraavanlaisia obkekteja: {attacker: Token, defender: Token}
+ */
+let battleLines = [];
+
 const centroidFill = "rgba(255, 128, 0, 1)";
 const ownerlessCountryFill = "#000000";
 const seaFill = "#66ccff";
@@ -189,23 +194,23 @@ d3.json("kartta8.topojson", function(error, topology) {
 
     // TODO: TÄHÄN JÄÄTIIN 21.6.2019
     // TODO: ei tarvita enää nimitiedostoa
-    d3.tsv("world-country-names.tsv", function(data){
+    // d3.tsv("world-country-names.tsv", function(data){
         //countryNames = data;
         //console.log("country names:", countryNames);
-        playerService.initializePlayerData();
-        turnService.initializeTurnData();
-        updateCurrentPlayerInfo();
-        initializeCountryData(pathDataArray, neighborsArrays);
-        updateCentroidCircles();
-        updateCountryColors(null); // Update all country colors to set the initial colors.
-        initializeDocument();
-        initializeInitialPlayerPresences();
-        updateToppingCircles();
+    //});
+    playerService.initializePlayerData();
+    turnService.initializeTurnData();
+    updateCurrentPlayerInfo();
+    initializeCountryData(pathDataArray, neighborsArrays);
+    updateCentroidCircles();
+    updateCountryColors(null); // Update all country colors to set the initial colors.
+    initializeDocument();
+    initializeInitialPlayerPresences();
+    updateToppingCircles();
 
-        dispatchCustomEvent("phaseChanged");
-        dispatchCustomEvent("currentPlayerChanged");
-        dispatchCustomEvent("turnChanged");
-    });
+    dispatchCustomEvent("phaseChanged");
+    dispatchCustomEvent("currentPlayerChanged");
+    dispatchCustomEvent("turnChanged");
 });
 
 // zoom and pan
@@ -228,6 +233,7 @@ var zoom = d3.behavior.zoom()
 
         updateToppingCircles();
         updateCentroidCircles();
+        updateBattleLines();// TODO: updateToppingCircles voisi ehkä kutstua tätä?
 
         // path.projection palauttaa funktion. Joten miten sen voi asettaa HTML-elementin
         // attribuutin arvoksi? - Funktiota ei asetettane suoraan arvoksi, vaan d3:ssa
@@ -375,7 +381,7 @@ function updateToppingCircles(){
                 tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
             }else{
                 // Tokens of same owner are not stacked.
-                tokenTranslation = getSpreadTokenTranslationByOwnerAndCountry(country, d.token);
+                tokenTranslation = getSpreadTokenTranslationFromTokenAndCountry(country, d.token);
             }
             const x = tokenTranslation.x;
             const y = tokenTranslation.y;
@@ -410,6 +416,8 @@ function updateToppingCircles(){
             //return "url(#star)";//d.token.owner.color;
         });
     selection.exit().remove();
+
+    // TODO: poista taisteluviivat jos tarvetta
 
     updateTokenStackNumbers();
 }
@@ -447,6 +455,80 @@ function updateTokenStackNumbers(){
     drawInCorrectOrder()
 }
 
+function updateBattleLines(){
+    //const battleLineData = dataForRendering.getBattleLineData();
+    let selection = g.selectAll(".battle-line").data(battleLines);
+    selection
+        .enter()
+        .append("line")
+        .classed({"battle-line": true})
+        .style("stroke", "orange")
+        .style("stroke-width", "10")
+        .transition()
+        .each("end", function(d){
+            console.log("Battle line transition ended");
+            // Remove the data of this battle line from battleLines.
+
+            const filteredBattleLines = battleLines.filter(function(battleLine){
+                //console.log("battleLine:", battleLine);
+                //console.log("d:", d);
+                //console.log("battleLine.attack === d.attacker:", battleLine.attack === d.attacker);
+                //console.log("battleLine.attack === d.attacker:", battleLine.attack === d.attacker);
+                return !(
+                    battleLine.attacker === d.attacker
+                    && battleLine.defender === d.defender);
+            });
+            battleLines = filteredBattleLines;
+            updateBattleLines();
+        })
+        .duration(1500)
+        .style("stroke-width", "2");
+        /*.attr("cx", function(d) {
+            return projection([targetGeographicCoordinates[0], targetGeographicCoordinates[1]])[0];
+        })
+        .attr("cy", function(d) {
+            return projection([targetGeographicCoordinates[0], targetGeographicCoordinates[1]])[1];
+        });*/
+    selection
+        //.style("stroke", "black")
+        .attr("x1", function(d){
+            return parseFloat(getTokenSelection(d.attacker).attr("cx"))
+                +getTokenTranslation(d.attacker).x;
+        }).attr("y1", function(d){
+            return parseFloat(getTokenSelection(d.attacker).attr("cy"))
+                +getTokenTranslation(d.attacker).y;
+        }).attr("x2", function(d){
+            return parseFloat(getTokenSelection(d.defender).attr("cx"))
+                +getTokenTranslation(d.defender).x;
+        }).attr("y2", function(d){
+            return parseFloat(getTokenSelection(d.defender).attr("cy"))
+                +getTokenTranslation(d.defender).y;
+        });
+    selection.exit().remove();
+    drawInCorrectOrder();
+}
+/* Token -> d3 selection of the token. */
+function getTokenSelection(token){
+    console.assert(tokenService.isToken(token), "Not token, but this:", token);
+    const selection = g.select(".topping-circle[data-token-id=" + token.id + "]");
+    return selection;
+}
+function getTokenTranslation(token){
+    console.assert(tokenService.isToken(token));
+    console.assert(Number.isInteger(token.location), "Not a number, is this:",
+        token.location);
+    const country = countryData.find(x => x.country.id === token.location);
+    const owner = token.owner;
+    let tokenTranslation;
+    if (tokenStacksByOwner) {
+        tokenTranslation = getTokenTranslationFromOwnerAndCountry(country, owner);
+    }else{
+        // Tokens of same owner are not stacked.
+        tokenTranslation = getSpreadTokenTranslationFromTokenAndCountry(country, token);
+    }
+    return tokenTranslation;
+}
+
 function updateCurrentPlayerInfo(){
     $('#current-player-info').text(turnService.currentPlayer.name);
 }
@@ -478,9 +560,16 @@ function updateCountryColors(event){
     Re-orders elements in the DOM so that they are drawn on top of each other in the correct order.
  */
 function drawInCorrectOrder(){
-    const mapElements = g.selectAll("*");
+    //console.log("drawInCorrectOrder called");
+    //const mapElements = g.selectAll("*");
+    //console.log("type of mapElements:", typeof mapElements);
+    //console.log("mapElements:", mapElements);
     // Those that are before in the order are drawn behind those that are after.
     const comparator = function(beforeElementData, afterElementData){
+        // Sorting is based on the data of elements, which can be undefined event though
+        // none of the elements are undefined.
+        console.assert(beforeElementData !== undefined);
+        console.assert(afterElementData !== undefined);
         // Return positive value if beforeElement should be before afterElement, and vice versa,
         // or zero value for arbitrary order.
         const beforeElementPriority = getElementPriority(beforeElementData);
@@ -493,7 +582,22 @@ function drawInCorrectOrder(){
             return -1;
         }
     };
+    // TODO: Jostakin syystä vaikka funktion alussa mapElementsin mikään elementti ei ole undefined,
+    // tässä kohtaa on. En tiedä miten se on mahdollista, paitsi että mapElements ei kai ole
+    // tavallinen array vaan joku d3-juttu, ja ehkä sitä siten voidaan päivittää
+    // mapElements.sort(comparator):n aikana tai jotain. Tai DOMia on päivitetty ja se vaikuttaa
+    // siihen. Olen toistanut tämän vain taistelun aikana.
+    // Ratkaisuna lisätään undefinedin käsittely comparator-funktioon.
+    const mapElements = g.selectAll("*");
+    mapElements.forEach(function(mapElement){
+        console.assert(mapElement !== undefined);
+    });
     mapElements.sort(comparator); // This re-orders selected elements in the DOM.
+    // TODO: jostakin syystä undefined jää kummittelemaan taistelun ja tämän function
+    // suorituksen jälkeen, vaikka mikään ei muuttuisi DOMissa.
+    // https://stackoverflow.com/questions/11781710/d3-sort-function-always-passes-undefined-arguments
+    //g.selectAll("*").sort(comparator);
+
 }
 
 /*
@@ -501,7 +605,7 @@ function drawInCorrectOrder(){
     TODO funktion nimi
  */
 function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
-    console.assert(owner.color !== undefined); // does it look like a Player object. // TODO horrible
+    console.assert(owner instanceof playerService.Player); // does it look like a Player object.
     const ownersWithTokensPresent = dataForRendering.getOwnersPresentInCountry(countryPresentation);
     const slotAmount = ownersWithTokensPresent.length;
     const slotIndex = getTokenSlotIndex(ownersWithTokensPresent, owner);
@@ -514,9 +618,11 @@ function getTokenTranslationFromOwnerAndCountry(countryPresentation, owner){
 /*
     Same as getTokenTranslationFromOwnerAndCountry, except tokens are not stacked.
  */
-function getSpreadTokenTranslationByOwnerAndCountry(countryPresentation, token){
+function getSpreadTokenTranslationFromTokenAndCountry(countryPresentation, token){
+    console.assert(tokenService.isToken(token));
     const tokensPresent = tokenService.getTokensInCountry(countryPresentation.country.id);
     const slotAmount = tokensPresent.length;
+    //console.log("Tokens present:", slotAmount);
     const slotIndex = getSpreadTokenSlotIndex(tokensPresent, token);
     const tokenTranslation = calculateTokenTranslation(
         calculateZoomDependentDistanceFromCentroid(zoomScale, countryPresentation), slotAmount, slotIndex);
@@ -528,6 +634,7 @@ function getSpreadTokenTranslationByOwnerAndCountry(countryPresentation, token){
     and every token of has tokensPresent it's own slot.
  */
 function getSpreadTokenSlotIndex(tokensPresent, thisToken){
+    console.assert(tokenService.isToken(thisToken), thisToken);
     const slotPriorityComparator = function(token1, token2){
         console.assert(token1.id !== undefined);
         console.assert(token2.id !== undefined);
@@ -545,9 +652,12 @@ function getSpreadTokenSlotIndex(tokensPresent, thisToken){
     };
     const shallowCopyTokensPresent = tokensPresent.slice(); // Sorting will mutate the array so copy it.
     shallowCopyTokensPresent.sort(slotPriorityComparator);
+    //console.log("shallowCopyTokensPresent:", shallowCopyTokensPresent);
     const slotAmount = shallowCopyTokensPresent.length;
+    //console.log("slotAmount", slotAmount);
+    //console.log("thisToken:", thisToken);
     const slotIndex = shallowCopyTokensPresent.findIndex(e => e === thisToken);
-    console.assert(slotIndex > -1 && slotIndex < slotAmount);
+    console.assert(slotIndex > -1 && slotIndex < slotAmount, "slotIndex:", slotIndex);
     return slotIndex;
 }
 
@@ -573,6 +683,7 @@ function getElementPriority(elementData){
     const land = background + 1;
     const movableThing = 0;
     const movableLabel = 1000 * 1000;
+    const specialEffect = movableLabel + 1;
     if(elementData.isSea === true){
         return sea;
     }
@@ -587,6 +698,9 @@ function getElementPriority(elementData){
     }
     if(elementData.isLabel === true){
         return movableLabel;
+    }
+    if(elementData.isBattleLine === true){
+        return specialEffect;
     }
     return background;
 }
@@ -777,6 +891,15 @@ function doTaxationAction(){
 }
 
 function performBattle(event){
+    /*
+    TODO:
+    uusi versio:
+    animoidaan viiva
+    laitetaan ruumiille ruumispattern
+    mitä muuta ruumiin tilaan pitää tehdä muutoksia?
+    tehdään voittajasta uupuneen patternin sisältävä, jos ei ole jo
+     */
+
     // TODO 20190317 tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
     //console.log("performBattle called");
     const d = event.detail;
@@ -784,23 +907,34 @@ function performBattle(event){
         d.attacker, d.defender, d.dead);
     const attackerSelection = g.select(".topping-circle[data-token-id=" + d.attacker.id + "]");
     const defenderSelection = g.select(".topping-circle[data-token-id=" + d.defender.id + "]");
+    const attackerDatum = attackerSelection.datum();
+    const defenderDatum = defenderSelection.datum();
     if(d.dead === d.attacker){
         console.log("Attacker will die");
+        animateBattleLine(attackerDatum, defenderDatum);
+        //tokenService.removeToken(attackerSelection.datum().token);
+        updateToppingCircles();
+        updateTokenStackNumbers();
         // Animate also defender counter-attack.
         // TODO: transitiot voi laittaa d3:lla jonoon jotenkin.
-        animateTokenAttack(attackerSelection, function(selection1){
+        /*animateTokenAttack(attackerSelection, function(selection1){
             animateTokenDeath(selection1, function(selection2){
                 tokenService.removeToken(selection2.datum().token);
                 //console.log("token removed!");
                 updateToppingCircles();
                 updateTokenStackNumbers();
             });
-        });
-        animateTokenAttack(defenderSelection);
+        });*/
+        //animateTokenAttack(defenderSelection);
     }else if(d.dead === d.defender){
         console.log("Defender will die");
+        animateBattleLine(attackerDatum, defenderDatum);
+        //tokenService.removeToken(defenderSelection.datum().token);
+        //console.log("defender token removed!");
+        updateToppingCircles();
+        updateTokenStackNumbers();
         //console.log("Defender owner:", defenderSelection.datum().token.owner.color);
-        animateTokenAttack(attackerSelection);
+        /*animateTokenAttack(attackerSelection);
         animateTokenDeath(defenderSelection, function(selection1) {
             //console.log("Defender death after animation function: selection1.datum().token.owner.color",
             //    selection1.datum().token.owner.color);
@@ -808,13 +942,38 @@ function performBattle(event){
             //console.log("defender token removed!");
             updateToppingCircles();
             updateTokenStackNumbers();
-        });
+        });*/
     }else{
         // No one died
-        animateTokenAttack(attackerSelection);
+        animateBattleLine(attackerDatum, defenderDatum);
+        //animateTokenAttack(attackerSelection);
         updateToppingCircles();
     }
 
+}
+
+function animateBattleLine(attackerDatum, defenderDatum){
+    console.assert(attackerDatum.hasOwnProperty("token"));
+    console.assert(defenderDatum.hasOwnProperty("token"));
+    battleLines.push({
+        attacker: attackerDatum.token,
+        defender: defenderDatum.token,
+        isBattleLine: true
+    });
+    updateBattleLines();
+    /*
+    const x1 = tokenSelection1.attr("cx");
+    const y1 = tokenSelection1.attr("cy");
+    const x2 = tokenSelection2.attr("cx");
+    const y2 = tokenSelection2.attr("cy");
+    const line = g.append("line")
+        .style("stroke", "black")
+        .attr("x1", x1)
+        .attr("y1", y1)
+        .attr("x2", x2)
+        .attr("y2", y2);
+    console.log("tokenSelection1:", tokenSelection1);
+    */
 }
 
 function animateTokenAttack(tokenSelection, afterAnimationFunction){
@@ -910,6 +1069,13 @@ function onTokenRemoved(){
 
 function onTurnChanged(){
     $('#current-turn-info').text(""+turnService.currentTurn);
+    const deadTokens = tokenService.tokens.filter(token => token.isDead === true);
+    deadTokens.forEach(function(token){
+        tokenService.removeToken(token);
+    });
+    tokenService.returnStrengthToTokens();
+    updateTokenData();
+    updateToppingCircles();
 }
 
 function onPhaseChanged(){
