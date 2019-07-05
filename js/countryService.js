@@ -119,7 +119,7 @@ const countryService = {};
         console.assert(owner instanceof playerService.Player);
         const countriesOfOwner = c.countries.filter(country => country.owner === owner);
         if(countriesOfOwner < 1){
-            console.warn("countriesOfOwner < 1");
+            console.warn("countriesOfOwner < 1", owner);
         }
         return countriesOfOwner;
     };

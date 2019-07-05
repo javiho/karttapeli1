@@ -101,27 +101,6 @@ const dataForRendering = {};
             }
         }
 
-        //TODO: pitää lisätä erikseen merialueiden naapuritiedot, sekä merialueille että maille
-        const topologyWithoutMinus99Features = topology.filter(feature => feature.id !== -99);
-        //c.addNeighborsByOverlap(topologyWithoutMinus99Features, countryModelObjects);
-
-        /*for(let i = 0; i < neighborsArrays.length; i++){
-            const featureEntry = topology[i];
-            const featureIdNumber = parseInt(featureEntry.id);
-            for(let j = 0; j < countryModelObjects; j++){
-                if(countryModelObjects[j].id === featureIdNumber){
-                    // TODO onko siis kaksiulotteinen?
-                    const neighborsIndices = neighborsArrays[i].flat();
-                    for(let k = 0; k < neighborsIndices.length; k++){
-                        const neighborFeatureEntry = topology[k];
-                        const neighborFeatureIdNumber = parseInt(neighborFeatureEntry.id);
-                        for(let l = 0; l < countryModelObjects)
-                            // TODO performanssi?
-                    }
-                }
-            }
-        }*/
-
         const countryData = [];
         // TODO: myös pinta-alat voisi tässä ympätä mukaan että voidaan arvioida paljonko tokeneilla on tilaa?
         // Siihen liittyen: https://github.com/d3/d3-geo#path_area
@@ -135,118 +114,6 @@ const dataForRendering = {};
         console.log("countryData:", countryData);
         countryService.countries = countryModelObjects;
         return countryData;
-    };
-
-    /*
-        Pre-condition: pathDataArray[i] corresponds to countries[i]. countries are Country objects.
-        pathDataArray and countries contains land and sea countries.
-     */
-    c.addNeighborsByOverlap = function(pathDataArray, countries){
-        console.assert(pathDataArray.length === countries.length);
-        //console.log("addNeighborsByOverlap pathDataArray", pathDataArray);
-        //console.log("addNeighborsByOverlap countries", countries);
-        for(let i = 0; i < pathDataArray.length; i++){
-            const polygon1 = pathDataArray[i];
-            for(let j = 0; j < pathDataArray.length; j++){
-                const polygon2 = pathDataArray[j];
-                if(polygon1 !== polygon2){
-                    const country1 = countries[i];
-                    const country2 = countries[j];
-                    let shouldBeNeighbors = null;
-                    if(polygon1.geometry.type === "Polygon" && polygon2.geometry.type === "Polygon"){
-                        let intersection;
-                        try {
-                            // turf.intersect returns null if there is no intersection, otherwise something else.
-                            intersection = turf.intersect(polygon1, polygon2);
-                        }catch(e){
-                            console.log("Determining intersection failed for:", country1.name, country2.name);
-                            continue;
-                        }
-                        shouldBeNeighbors = intersection !== null;
-                    }else if(polygon1.geometry.type === "MultiPolygon"){
-                        const partPolygons = polygon1.geometry.coordinates.map(function(coordsOfPolygon){
-                            return {geometry: {coordinates: coordsOfPolygon, type: "Polygon"}};
-                        });
-                        for(let partPolygon of partPolygons){
-                            let intersection;
-                            try {
-                                // turf.intersect returns null if there is no intersection, otherwise something else.
-                                intersection = turf.intersect(partPolygon, polygon2);
-                            }catch(e){
-                                console.log("Determining part polygon intersection failed for:",
-                                    country1.name, country2.name);
-                                //console.log(e);
-                                //console.log("polygon1 part:", partPolygon);
-                                continue;
-                            }
-                            shouldBeNeighbors = intersection !== null;
-                            if(shouldBeNeighbors){
-                                break;
-                            }
-                        }
-                        // TODO KESKEN: laske intersectio kullekin ja päättele siitä naapuruus
-                    }else if(polygon2.geometry.type === "MultiPolygon"){
-                        // Only handle the MultiPolygon case for polygon1, because each country is inspected
-                        // twice in this method so every one gets to be polygon1,
-                        // and for each pair there is maximum of one MultiPolygons
-                        // unless they are both land countries, in which case the neighbor relation has
-                        // been determined by an another method, so it doesn't matter that
-                        // this one fails to recognize the neighbor relation.
-                    }
-                    else{
-                        // Either both Features should be Polygons, or at least one should be MultiPolygon.
-                        console.assert(false);
-                    }
-
-                    //console.log("shouldBeNeighbors:", polygon1, polygon2, shouldBeNeighbors);
-                    if(shouldBeNeighbors){
-                        if(!country1.neighbors.includes(country2)){
-                            country1.addNeighbor(country2);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                        if(!country2.neighbors.includes(country1)){
-                            country2.addNeighbor(country1);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                    }
-                }
-            }
-        }
-        // TODO pistettävä samaan pääluuppiin multipolygonitkin
-        /*
-        // Handle MultiPolygons separately
-        for(let i = 0; i < pathDataArray.length; i++){
-            const polygon1 = pathDataArray[i];
-            for(let j = 0; j < pathDataArray.length; j++){
-                const polygon2 = pathDataArray[j];
-                if(polygon1 !== polygon2){
-                    const country1 = countries[i];
-                    const country2 = countries[j];
-                    let intersection;
-                    try {
-                        intersection = turf.intersect(polygon1, polygon2);
-                        // turf.intersect returns null if there is no intersection, otherwise something else.
-                    }catch(e){
-                        console.log("Determining intersection failed for:", country1.name, country2.name);
-                        continue;
-                    }
-                    const shouldBeNeighbors = intersection !== null;
-                    //console.log("shouldBeNeighbors:", polygon1, polygon2, shouldBeNeighbors);
-                    if(shouldBeNeighbors){
-
-                        if(!country1.neighbors.includes(country2)){
-                            country1.addNeighbor(country2);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                        if(!country2.neighbors.includes(country1)){
-                            country2.addNeighbor(country1);
-                            console.log("neighbors:", country1.name, country2.name);
-                        }
-                    }
-                }
-            }
-        }*/
-
     };
 
     /*
@@ -275,31 +142,6 @@ const dataForRendering = {};
     };
 
     c.getTextElementData = function(countryData){
-        const textElementData = [];
-        countryData.forEach(function(countryPresentation){
-            const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);
-            const ownersPresent = dataForRendering.getOwnersPresentInCountry(countryPresentation);
-            if(tokensInCountry.length > 0){
-                const ownersAndTokenAmounts = dataForRendering.getOwnerTokenAmountsInCountry(countryPresentation); // Map
-                ownersPresent.forEach(function(owner){
-                    const newTextElementEntry = {
-                        countryPresentation: countryPresentation,
-                        lon: countryPresentation.centroid[0],
-                        lat: countryPresentation.centroid[1],
-                        amountOfTokens: ownersAndTokenAmounts.get(owner),
-                        owner: owner, // The owner of those tokens of which amount this text element displays.
-                        isLabel: true
-                    };
-                    textElementData.push(newTextElementEntry);
-                });
-            }
-        });
-        return textElementData;
-    };
-
-    c.getBattleLineData = function(){
-        console.assert(false, "Ei käytössä");
-        // TODO: EI tarvittane?
         const textElementData = [];
         countryData.forEach(function(countryPresentation){
             const tokensInCountry = tokenService.getTokensInCountry(countryPresentation.country.id);

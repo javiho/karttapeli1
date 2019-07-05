@@ -65,51 +65,6 @@ const tokenStates = {
 };
 const seaCountryIdStart = 10000; // ids >= seaCountryIdStart are for sea "countries"
 
-/*
-    Pre-condition: objects is like this:
-    [
-        {geometry: {coordinates:[
-            [
-                [x, y],
-                ...
-            ],
-            ...
-        ]}},
-        ...
-    ]
-    TODO ei käytössä uudella datalla
-*/
-function invertCoordinateOrder(objects){
-    objects.forEach(function(object){
-        object.geometry.coordinates.forEach(function(coordinatesArray){
-            // coordinatesArray is an array of coordinate pairs
-            coordinatesArray.reverse(); // reverses in place
-        });
-    });
-}
-
-// TODO ei käytössä uudella datalla
-function replaceWithSmallerEquivalentLongitudes(objects){
-    objects.forEach(function(object){
-        object.geometry.coordinates.forEach(function(coordinatesArray){
-            // coordinatesArray is an array of coordinate pairs
-            coordinatesArray.forEach(function(coordinatePair){
-                const longitude = coordinatePair[0];
-                const maxLongitude = 180;
-                const minLongitude = -180;
-                const revolution = 360;
-                let newLongitude = longitude;
-                if(longitude >= maxLongitude){
-                    newLongitude = longitude - revolution;
-                }else if(longitude <= minLongitude){
-                    newLongitude = longitude + revolution;
-                }
-                coordinatePair[0] = newLongitude;
-            });
-        });
-    });
-}
-
 // load and display the World
 //d3.json("world-110m.json", function(error, topology) {
 d3.json("kartta8.topojson", function(error, topology) {
@@ -143,39 +98,10 @@ d3.json("kartta8.topojson", function(error, topology) {
 
     const ids = pathDataArray.map(entry => entry.id);
     console.assert(areAllUnique(ids), "Country ids contain duplicates", countElements(ids));
-    /*console.log("---------------");
-    const p1 = seaPathDataArray[0];
-    const p2 = seaPathDataArray[4];
-    console.log("p1", p1);
-    console.log("p2", p2);
-    const intersection = turf.intersect(p1, p2);
-    console.log("intersection:", intersection);
-    console.log("---------------");*/
-    //invertCoordinateOrder(seaPathDataArray);
-    //replaceWithSmallerEquivalentLongitudes(seaPathDataArray)
-    //console.log("inverted coordinates seaPathDataArray", seaPathDataArray);
-    //invertCoordinateOrder(pathDataArray);
-    //replaceWithSmallerEquivalentLongitudes(pathDataArray)
-    //console.log("inverted coordinates pathDataArray", pathDataArray);
 
-
-    //console.log("topology geometries:", topology.objects.countries.geometries);
     const neighborsArrays = topojson.neighbors(topology.objects.kartta2.geometries);
     console.log("neighbors array:", neighborsArrays);
-    /*let pathDataArray = topojson.feature(topology, topology.objects.kartta2).features
-        // add other stuff to the data in addition to topojson features
-        .map(function(element){
-            if(element.id === -99){
-                console.log("pathDataArray: was -99");
-                // Do nothing.
-            }else{
-                element.isCountry = true;
-            }
-            return element;
-        });// Each element of the array will be datum of an D3/DOM element.
-    */
 
-    //pathDataArray = pathDataArray.concat(seaPathDataArray);
     //console.log("pathDataArray:", pathDataArray);
     g.selectAll("path")
         .data(pathDataArray)
@@ -192,12 +118,6 @@ d3.json("kartta8.topojson", function(error, topology) {
     // TODO: mihin tätä käytetään?
     //var countries = topojson.feature(topology, topology.objects.countries).features;
 
-    // TODO: TÄHÄN JÄÄTIIN 21.6.2019
-    // TODO: ei tarvita enää nimitiedostoa
-    // d3.tsv("world-country-names.tsv", function(data){
-        //countryNames = data;
-        //console.log("country names:", countryNames);
-    //});
     playerService.initializePlayerData();
     turnService.initializeTurnData();
     updateCurrentPlayerInfo();
@@ -416,9 +336,6 @@ function updateToppingCircles(){
             //return "url(#star)";//d.token.owner.color;
         });
     selection.exit().remove();
-
-    // TODO: poista taisteluviivat jos tarvetta
-
     updateTokenStackNumbers();
 }
 
@@ -456,7 +373,6 @@ function updateTokenStackNumbers(){
 }
 
 function updateBattleLines(){
-    //const battleLineData = dataForRendering.getBattleLineData();
     let selection = g.selectAll(".battle-line").data(battleLines);
     selection
         .enter()
@@ -470,10 +386,6 @@ function updateBattleLines(){
             // Remove the data of this battle line from battleLines.
 
             const filteredBattleLines = battleLines.filter(function(battleLine){
-                //console.log("battleLine:", battleLine);
-                //console.log("d:", d);
-                //console.log("battleLine.attack === d.attacker:", battleLine.attack === d.attacker);
-                //console.log("battleLine.attack === d.attacker:", battleLine.attack === d.attacker);
                 return !(
                     battleLine.attacker === d.attacker
                     && battleLine.defender === d.defender);
@@ -483,14 +395,9 @@ function updateBattleLines(){
         })
         .duration(1500)
         .style("stroke-width", "2");
-        /*.attr("cx", function(d) {
-            return projection([targetGeographicCoordinates[0], targetGeographicCoordinates[1]])[0];
-        })
-        .attr("cy", function(d) {
-            return projection([targetGeographicCoordinates[0], targetGeographicCoordinates[1]])[1];
-        });*/
+    // Get the positions of token circles (taking account the translation) and
+    // change the line's position to be between them.
     selection
-        //.style("stroke", "black")
         .attr("x1", function(d){
             return parseFloat(getTokenSelection(d.attacker).attr("cx"))
                 +getTokenTranslation(d.attacker).x;
@@ -560,14 +467,11 @@ function updateCountryColors(event){
     Re-orders elements in the DOM so that they are drawn on top of each other in the correct order.
  */
 function drawInCorrectOrder(){
-    //console.log("drawInCorrectOrder called");
-    //const mapElements = g.selectAll("*");
-    //console.log("type of mapElements:", typeof mapElements);
-    //console.log("mapElements:", mapElements);
     // Those that are before in the order are drawn behind those that are after.
     const comparator = function(beforeElementData, afterElementData){
         // Sorting is based on the data of elements, which can be undefined event though
         // none of the elements are undefined.
+        // https://stackoverflow.com/questions/11781710/d3-sort-function-always-passes-undefined-arguments
         console.assert(beforeElementData !== undefined);
         console.assert(afterElementData !== undefined);
         // Return positive value if beforeElement should be before afterElement, and vice versa,
@@ -582,22 +486,11 @@ function drawInCorrectOrder(){
             return -1;
         }
     };
-    // TODO: Jostakin syystä vaikka funktion alussa mapElementsin mikään elementti ei ole undefined,
-    // tässä kohtaa on. En tiedä miten se on mahdollista, paitsi että mapElements ei kai ole
-    // tavallinen array vaan joku d3-juttu, ja ehkä sitä siten voidaan päivittää
-    // mapElements.sort(comparator):n aikana tai jotain. Tai DOMia on päivitetty ja se vaikuttaa
-    // siihen. Olen toistanut tämän vain taistelun aikana.
-    // Ratkaisuna lisätään undefinedin käsittely comparator-funktioon.
     const mapElements = g.selectAll("*");
     mapElements.forEach(function(mapElement){
         console.assert(mapElement !== undefined);
     });
     mapElements.sort(comparator); // This re-orders selected elements in the DOM.
-    // TODO: jostakin syystä undefined jää kummittelemaan taistelun ja tämän function
-    // suorituksen jälkeen, vaikka mikään ei muuttuisi DOMissa.
-    // https://stackoverflow.com/questions/11781710/d3-sort-function-always-passes-undefined-arguments
-    //g.selectAll("*").sort(comparator);
-
 }
 
 /*
@@ -652,10 +545,7 @@ function getSpreadTokenSlotIndex(tokensPresent, thisToken){
     };
     const shallowCopyTokensPresent = tokensPresent.slice(); // Sorting will mutate the array so copy it.
     shallowCopyTokensPresent.sort(slotPriorityComparator);
-    //console.log("shallowCopyTokensPresent:", shallowCopyTokensPresent);
     const slotAmount = shallowCopyTokensPresent.length;
-    //console.log("slotAmount", slotAmount);
-    //console.log("thisToken:", thisToken);
     const slotIndex = shallowCopyTokensPresent.findIndex(e => e === thisToken);
     console.assert(slotIndex > -1 && slotIndex < slotAmount, "slotIndex:", slotIndex);
     return slotIndex;
@@ -891,15 +781,6 @@ function doTaxationAction(){
 }
 
 function performBattle(event){
-    /*
-    TODO:
-    uusi versio:
-    animoidaan viiva
-    laitetaan ruumiille ruumispattern
-    mitä muuta ruumiin tilaan pitää tehdä muutoksia?
-    tehdään voittajasta uupuneen patternin sisältävä, jos ei ole jo
-     */
-
     // TODO 20190317 tapahtuu bugi jos klikkaa puolustajaa hyökkäysanimaation aikana
     //console.log("performBattle called");
     const d = event.detail;
@@ -933,20 +814,9 @@ function performBattle(event){
         //console.log("defender token removed!");
         updateToppingCircles();
         updateTokenStackNumbers();
-        //console.log("Defender owner:", defenderSelection.datum().token.owner.color);
-        /*animateTokenAttack(attackerSelection);
-        animateTokenDeath(defenderSelection, function(selection1) {
-            //console.log("Defender death after animation function: selection1.datum().token.owner.color",
-            //    selection1.datum().token.owner.color);
-            tokenService.removeToken(selection1.datum().token);
-            //console.log("defender token removed!");
-            updateToppingCircles();
-            updateTokenStackNumbers();
-        });*/
     }else{
         // No one died
         animateBattleLine(attackerDatum, defenderDatum);
-        //animateTokenAttack(attackerSelection);
         updateToppingCircles();
     }
 
@@ -961,63 +831,6 @@ function animateBattleLine(attackerDatum, defenderDatum){
         isBattleLine: true
     });
     updateBattleLines();
-    /*
-    const x1 = tokenSelection1.attr("cx");
-    const y1 = tokenSelection1.attr("cy");
-    const x2 = tokenSelection2.attr("cx");
-    const y2 = tokenSelection2.attr("cy");
-    const line = g.append("line")
-        .style("stroke", "black")
-        .attr("x1", x1)
-        .attr("y1", y1)
-        .attr("x2", x2)
-        .attr("y2", y2);
-    console.log("tokenSelection1:", tokenSelection1);
-    */
-}
-
-function animateTokenAttack(tokenSelection, afterAnimationFunction){
-    const normalRadius = parseInt(tokenSelection.attr("r"));
-    tokenSelection.transition()
-    // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
-        .each("end", function(){
-            //updateToppingCircles();
-            //console.log("battle attack transition ended");
-            tokenSelection.attr("r", ""+normalRadius);
-            if(afterAnimationFunction !== undefined){
-                afterAnimationFunction(tokenSelection);
-            }
-        })
-        .duration(1000)
-        .attr("r", function(d) {
-            //console.log(normalRadius);
-            return normalRadius * 2;
-        });
-}
-
-function animateTokenDeath(tokenSelection, afterAnimationFunction){
-    const normalRadius = parseInt(tokenSelection.attr("r"));
-    // TODO: Tässä tokenin datum näyttäisi olevan eri kuin alempana kohdassa 2.
-    //console.log("animateTokenDeath: tokenSelection.datum().token.owner.color",
-    //    tokenSelection.datum().token.id);
-    tokenSelection.transition()
-    // https://github.com/d3/d3-3.x-api-reference/blob/master/Transitions.md#each
-        .each("end", function(){
-            //updateToppingCircles();
-            //console.log("token death transition ended");
-            tokenSelection.attr("r", ""+normalRadius);
-            if(afterAnimationFunction !== undefined){
-                // TODO: 2.
-                //console.log("animateTokenDeath afterAnimationFunction tokenSelection owner:",
-                //    tokenSelection.datum().token.id);
-                afterAnimationFunction(tokenSelection);
-            }
-        })
-        .duration(1000)
-        .attr("r", function(d) {
-            //console.log(normalRadius);
-            return normalRadius * (1/3);
-        });
 }
 
 /*
