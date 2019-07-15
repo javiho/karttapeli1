@@ -72,6 +72,27 @@ function areAllUnique(array){
     return asSet.size === array.length;
 }
 
+function fitToInterval(number, min, max){
+    number = number < min ? min: number;
+    number = number > max ? max: number;
+    return number;
+}
+
+function isValidLongitude(number){
+    const isNumber = typeof  number === "number";
+    return isNumber && isInInterval(number, -180, 180);
+}
+
+function isValidLatitude(number){
+    const isNumber = typeof  number === "number";
+    return isNumber && isInInterval(number, -90, 90);
+}
+
+/* min and max are inclusive */
+function isInInterval(number, min, max){
+    return number >= min && number <= max;
+}
+
 function getBaseLogarithm(base, number) {
     return Math.log(number) / Math.log(base);
 }

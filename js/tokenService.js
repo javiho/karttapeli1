@@ -1,6 +1,5 @@
 "use strict";
 
-// This object contains functions for life and the abstraction of it's presentation in the view, if you catch my meaning.
 const tokenService = {};
 (function(c){
     // c stands for context.
