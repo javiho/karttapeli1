@@ -15,31 +15,33 @@ const tokenService = {};
         });*/
     };
 
-    c.addToken = function(locationCountryId, player){
-        console.assert(player instanceof playerService.Player);
-        const newToken = c._createToken(locationCountryId, player);
+    c.addToken = function(locationCountry, player){
+        console.assert(player instanceof playerService.Player
+            && locationCountry instanceof countryService.Country);
+        const newToken = new c.Token(locationCountry, player);
         c.tokens.push(newToken);
-        countryService.updateOwner(countryService.getCountryById(locationCountryId));
+        countryService.updateOwner(locationCountry);
+        dispatchCustomEvent("tokenCreated", {token: newToken});
         return newToken;
     };
 
     /*
         Pre-condition: player is a player object.
      */
-    c._createToken = function(countryId, player){
+    /*c._createToken = function(countryId, player){
         console.assert(countryId !== undefined);
         console.assert(player !== undefined);
         console.assert(player.name !== undefined);
         console.assert(player.id !== undefined);
         console.assert(player.color !== undefined);
         return {
-            id: c._generateUniqueId(), // string
+            id: generateUniqueId(), // string
             location: countryId,
             owner: player,
             hasStrength: true,
             isDead: false
         };
-    };
+    };*/
 
     c.canMoveToken = function(tokenId, newLocationId){
         // TODO kesken
@@ -164,10 +166,17 @@ const tokenService = {};
         return isToken;
     };
 
-    c._generateUniqueId = function(){
-        const timePart = new Date().getTime().toString(36); // TODO: Miksi juuri 36?
-        const randomPart = Math.random().toString(36).substring(2); // The two first chars are '0' and '.'.
-        return "rid-" + timePart + "-" + randomPart;
+    /*
+        Pre-condition: player is a player object. country is a Country.
+     */
+    c.Token = function(country, player){
+        console.assert(country instanceof countryService.Country);
+        console.assert(player instanceof playerService.Player);
+        this.id = generateUniqueId(); // string
+        this.location = country; // Country
+        this.owner = player; // Player
+        this.hasStrength = true;
+        this.isDead = false;
     };
 
-}(tokenService));
+})(tokenService);

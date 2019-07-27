@@ -93,6 +93,32 @@ function isInInterval(number, min, max){
     return number >= min && number <= max;
 }
 
+/*
+Pre-condition: keys is an array of keys. If !duplicatesAllowed, keys must not have duplicates.
+Returns a map where each element of keys is a key and every value is null.
+ */
+function getMapWithNulls(keys, duplicatesAllowed=true){
+    const map = new Map();
+    keys.forEach(function(key, index){
+        if(!duplicatesAllowed){
+            console.assert(map.get(key) === undefined,
+            "Duplicate key at index "+index);
+        }
+        map.set(key, null);
+    });
+    return map;
+}
+
+function getDistance(p1, p2){
+    console.assert(p1.length === 2 && p2.length === 2,
+        "p1:", p1, "p2", p2);
+    const a = Math.abs(p1[0] - p2[0]);
+    const b = Math.abs(p1[1] - p2[1]);
+    const distance = Math.hypot(a, b);
+    console.assert(typeof distance === "number");
+    return distance;
+}
+
 function getBaseLogarithm(base, number) {
     return Math.log(number) / Math.log(base);
 }
@@ -102,4 +128,10 @@ function dispatchCustomEvent(eventName, detail){
         detail: detail
     });
     document.dispatchEvent(customEvent);
+}
+
+function generateUniqueId(){
+    const timePart = new Date().getTime().toString(36); // TODO: Miksi juuri 36?
+    const randomPart = Math.random().toString(36).substring(2); // The two first chars are '0' and '.'.
+    return "rid-" + timePart + "-" + randomPart;
 }
