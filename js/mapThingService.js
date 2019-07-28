@@ -13,6 +13,7 @@ c.MapThing = function(geoCountry, modelObject){
     this.coordinates = null; // lon, lat: [number, number]
     this.geoCountry = geoCountry; // GeoCountry
     this.modelObject = modelObject;
+    //this.isMapThing = true; // This is so that one can easily check if the datum is map thing.
 };
 
 c.addMapThing = function(geoCountry, modelObject){

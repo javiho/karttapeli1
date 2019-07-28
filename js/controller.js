@@ -1,7 +1,10 @@
 "use strict";
 
+let selectedTokenMTs = []; // MapThings which contain tokens
+
 renderer.initializeMap(function(){
     document.addEventListener("tokenCreated", onTokenCreated);
+    document.addEventListener("click", universalClickHandler);
 
     playerService.initializePlayerData();
     initializeInitialPlayerPresences();
@@ -23,9 +26,47 @@ function initializeInitialPlayerPresences(){
 
 //////////////////// Listeners ///////////////////
 
+function universalClickHandler(event){
+    const target = event.target;
+    const targetD3 = d3.select(target);
+    const datum = targetD3.datum();
+    if(datum !== undefined) {
+        if(datum.isCountry) {
+            const countryId = datum.id;
+            if(false){
+                ;
+            }else{
+                selectedTokenMTs = [];
+                renderer.updateTokens();
+                console.log("Nothing here yet");
+            }
+        }else if(datum instanceof mapThingService.MapThing){
+            if(datum.modelObject instanceof tokenService.Token){
+                // TODO: jos laitetaan datumiksi objecti ja luetaan datum ja verrataan
+                // niitä === -operaattorilla, onko sama?
+                const clickedToken = datum.modelObject;
+                const isAnyTokenSelected = selectedTokenMTs.length > 0;
+                const isThisTokenSelected = selectedTokenMTs.find(
+                    x => clickedToken.id === x.modelObject.id) !== undefined;
+                doSelectTokenAction(datum);
+            }else{
+                console.assert(false, "For now, this should not happen.");
+            }
+        }
+    }
+}
+
 function onTokenCreated(event){
     const token = event.detail.token;
     console.assert(token instanceof tokenService.Token);
     const country = token.location;
     renderer.addMapThing(token, country);
+}
+
+///////////////////// Actions //////////////////////
+
+function doSelectTokenAction(datum){
+    selectedTokenMTs = [];
+    selectedTokenMTs.push(datum);
+    renderer.updateTokens();
 }

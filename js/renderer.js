@@ -132,7 +132,7 @@ c.initializeMap = function(callback) {
             // TODO tässä vaiheessa liikutellaan kaikkea mikä lepää kartan päällä
             //updateToppingCircles();
             c.updateCentroidCircles();
-            c.updateTokens(mapThingService.mapThings);
+            c.updateTokens();
             //c._updatePointGridCircles();
             //updateBattleLines();// TODO: updateToppingCircles voisi ehkä kutstua tätä?
 
@@ -218,7 +218,7 @@ c.updateCentroidCircles = function(){
     //drawInCorrectOrder();
 };
 
-c.updateTokens = function(topThingData){
+c.updateTokens = function(){
     //console.log("centroidData:", centroidData);
     /*const centroidData = c._getCentroidData();
     const extendedCentroidData = centroidData.map(function(element){
@@ -226,7 +226,8 @@ c.updateTokens = function(topThingData){
         centroidEntry.isCentroid = true;
         return centroidEntry;
     });*/
-    const tokenData = topThingData.filter(e => e.modelObject instanceof tokenService.Token);
+    const tokenData = mapThingService.mapThings.filter(
+        x => x.modelObject instanceof tokenService.Token);
     let selection = c.g.selectAll(".token").data(tokenData);
     selection.enter()
         .append("circle")
@@ -252,6 +253,24 @@ c.updateTokens = function(topThingData){
         })
         .attr("fill", function(d){
             return d.modelObject.owner.color;
+        })
+        .attr("stroke", function(d){
+            const contains = selectedTokenMTs.find(x => x.modelObject.id === d.modelObject.id);
+            if(!contains){
+                //console.log("wasn't found in selected elements");
+                return "black"; // No stroke, because it's set empty below.
+            }else{
+                return "red";
+            }
+        })
+        .attr("stroke-dasharray", function(d){
+            const contains = selectedTokenMTs.find(x => x.modelObject.id === d.modelObject.id);
+            if(!contains){
+                //console.log("wasn't found in selected elements");
+                return ""; // No stroke.
+            }else{
+                return "5,5";
+            }
         });
     //drawInCorrectOrder();
 };
