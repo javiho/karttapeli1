@@ -158,6 +158,12 @@ c.initializeCountryData = function(topology, centroidData, neighborsArrays, path
     return countryData;
 };
 
+c.getGeoCountryById = function(countryId){
+    const geoCountry = renderer.countryData.find(x => x.country.id === countryId);
+    console.assert(geoCountry !== undefined, "countryId:", countryId);
+    return geoCountry;
+};
+
 c._createPointGrid = function(countryData, area){
     // topology was in same order and of same length as centroid data.
     const featureEntry = countryData;

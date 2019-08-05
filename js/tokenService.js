@@ -148,12 +148,13 @@ const tokenService = {};
     /*
     Pre-condition: countryId is a number.
      */
-    c.getTokensInCountry = function(countryId){
-        console.assert(typeof countryId === "number");
-        if(typeof countryId !== "number"){
-            console.log("getTokensInCountry.countryId's type is: ", typeof countryId);
-        }
-        return c.tokens.filter(token => token.location === countryId);
+    c.getTokensInCountry = function(country){
+        //console.assert(typeof countryId === "number");
+        console.assert(country instanceof countryService.Country, country);
+        //if(typeof countryId !== "number"){
+        //    console.log("getTokensInCountry.countryId's type is: ", typeof countryId);
+        //}
+        return c.tokens.filter(token => token.location === country);
     };
 
     // TODO: pitäisi olla joku constructori että voisi käyttää instanceof ja tämä olisi turha.

@@ -5,9 +5,12 @@ let selectedTokenMTs = []; // MapThings which contain tokens
 renderer.initializeMap(function(){
     document.addEventListener("tokenCreated", onTokenCreated);
     document.addEventListener("click", universalClickHandler);
+    document.addEventListener("countryOwnerChanged", onCountryOwnerChanged);
 
     playerService.initializePlayerData();
     initializeInitialPlayerPresences();
+    renderer.updateTokens();
+    onCountryOwnerChanged(null); // Update all country colors to set the initial colors.
 });
 
 function initializeInitialPlayerPresences(){
@@ -61,6 +64,11 @@ function onTokenCreated(event){
     console.assert(token instanceof tokenService.Token);
     const country = token.location;
     renderer.addMapThing(token, country);
+}
+
+function onCountryOwnerChanged(event){
+    console.log("onCountryOwnerChanged called:", event);
+    renderer.updateCountryColors();
 }
 
 ///////////////////// Actions //////////////////////

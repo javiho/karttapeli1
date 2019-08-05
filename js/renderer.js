@@ -16,6 +16,8 @@ c.countryData = null;
 
 // Constants
 c.centroidFill = null;
+c.ownerlessCountryFill = "#000000";
+c.seaFill = "#66ccff";
 
 
 
@@ -273,6 +275,33 @@ c.updateTokens = function(){
             }
         });
     //drawInCorrectOrder();
+};
+
+c.updateCountryColors = function(){
+    c.g.selectAll("path").attr("fill", function(d){
+        if(d.isCountry){
+            if(d.isSea){
+                return c.seaFill;
+            }
+            const countryId = d.id;
+            console.assert(countryId !== undefined);
+            //const countryModelObject = countryService.getCountryById(countryId);
+            const geoCountry = geoCountryService.getGeoCountryById(countryId);
+            const country = geoCountry.country;
+            console.assert(country.owner !== undefined);
+            if(d.name === "Mongolia"){
+                ;
+            }
+            let newColor = null;
+            if(country.owner == null){
+                newColor = c.ownerlessCountryFill;
+            }else{
+                newColor = country.owner.color;
+            }
+            return newColor;
+        }
+        // return undefined
+    });
 };
 
 c._getCentroidData = function(){
