@@ -18,6 +18,17 @@ c.GeoCountry = function(country, pointGrid){
     this.country = country; // Country
 };
 
+/* Pre-condition: mapThing is in geoCountry. */
+c.removeMapThing = function(geoCountry, mapThing){
+    console.assert(geoCountry instanceof c.GeoCountry && mapThing instanceof mapThingService.MapThing);
+    const coordinates = mapThing.coordinates;
+    const thingAtCoords = geoCountry.coordsToThing.get(coordinates);
+    if(thingAtCoords === undefined || thingAtCoords === null){
+        throw Error("mapThing was not at geoCountry");
+    }
+    geoCountry.coordsToThing.set(coordinates, null);
+};
+
 /*
 Returns the coors of free slot.
  */

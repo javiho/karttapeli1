@@ -310,6 +310,7 @@ c._getCentroidData = function(){
 
 ///////////////////// Objects to and from countries ///////////
 
+// TODO: voisi ottaa GeoCountryn johdonmukaisuuden vuoksi
 c.addMapThing = function(mapThingModelObject, country){
     console.assert(country instanceof countryService.Country);
     const geoCountry = c.countryData.find(x => x.country === country);
@@ -318,8 +319,12 @@ c.addMapThing = function(mapThingModelObject, country){
     c._addThingOnCountry(geoCountry, mapThing);
 };
 
-c._moveThingFromCountryToAnother = function(){
- // TODO
+c.moveThingFromCountryToAnother = function(mapThing, fromGeoCountry, toGeoCountry){
+    console.assert(fromGeoCountry instanceof geoCountryService.GeoCountry
+        && toGeoCountry instanceof geoCountryService.GeoCountry
+        && mapThing instanceof mapThingService.MapThing, mapThing, fromGeoCountry, toGeoCountry);
+    c._removeThingFromCountry(fromGeoCountry, mapThing);
+    c._addThingOnCountry(toGeoCountry, mapThing)
 };
 
 c._addThingOnCountry = function(geoCountry, mapThing){
@@ -332,8 +337,12 @@ c._addThingOnCountry = function(geoCountry, mapThing){
     mapThing.coordinates = coords;
 };
 
-c._removeThingFromCountry = function(geoCountry, thing){
-    // TODO KESKEN
+c._removeThingFromCountry = function(geoCountry, mapThing){
+    console.assert(geoCountry instanceof geoCountryService.GeoCountry
+        && mapThing instanceof mapThingService.MapThing);
+    geoCountryService.removeMapThing(geoCountry, mapThing);
+    mapThing.geoCountry = null;
+    mapThing.coordinates = null;
 };
 
 })(renderer);

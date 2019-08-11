@@ -6,6 +6,7 @@ renderer.initializeMap(function(){
     document.addEventListener("tokenCreated", onTokenCreated);
     document.addEventListener("click", universalClickHandler);
     document.addEventListener("countryOwnerChanged", onCountryOwnerChanged);
+    document.addEventListener("tokenMoved", onTokenMoved);
 
     playerService.initializePlayerData();
     initializeInitialPlayerPresences();
@@ -36,8 +37,12 @@ function universalClickHandler(event){
     if(datum !== undefined) {
         if(datum.isCountry) {
             const countryId = datum.id;
-            if(false){
-                ;
+            if(event.shiftKey){
+                if(turnService.currentPhase === turnService.Phases.maneuver){
+                    doMoveTokenAction(countryId);
+                }else{
+                    console.log("Can only move in the maneuver phase!");
+                }
             }else{
                 selectedTokenMTs = [];
                 renderer.updateTokens();
@@ -71,10 +76,50 @@ function onCountryOwnerChanged(event){
     renderer.updateCountryColors();
 }
 
+function onTokenMoved(event){
+    console.log("tokenMoved called:", event);
+    const token = event.detail.token;
+    const originalLocation = event.detail.originalLocation;
+    const newLocation = event.detail.newLocation;
+    console.assert(originalLocation instanceof countryService.Country
+        && newLocation instanceof countryService.Country
+        && token instanceof tokenService.Token);
+    const originalGeoCountry = renderer.countryData.find(x => x.country === originalLocation);
+    const newGeoCountry = renderer.countryData.find(x => x.country === newLocation);
+    const mapThing = mapThingService.mapThings.find(x => x.modelObject === token);
+    renderer.moveThingFromCountryToAnother(mapThing, originalGeoCountry, newGeoCountry);
+    renderer.updateTokens();
+}
+
 ///////////////////// Actions //////////////////////
 
 function doSelectTokenAction(datum){
     selectedTokenMTs = [];
     selectedTokenMTs.push(datum);
     renderer.updateTokens();
+}
+
+function doMoveTokenAction(countryId){
+    console.assert(selectedTokenMTs.every(x => x.modelObject instanceof tokenService.Token));
+    const geoCountry = geoCountryService.getGeoCountryById(countryId);
+    console.assert(geoCountry !== undefined);
+    /* Liikkumisen animointia varten
+    const selectedTokens3Dselection = d3.selectAll('.token').filter(function(d){
+        const token = d.modelObject;
+        for(let selectedTokenMT of selectedTokenMTs){
+            if(token.id === selectedTokenMT.modelObject.id){
+                return true;
+            }
+        }
+        return false;
+    });*/
+    for (let selectedTokenMT of selectedTokenMTs) {
+        const selectedToken = selectedTokenMT.modelObject;
+        if(tokenService.canMoveToken(selectedToken.id, geoCountry.country)) {
+            tokenService.moveToken(selectedToken.id, geoCountry.country);
+            //transitionTokens(selectedTokens3Dselection, centroid); TODO liikkumisen animointi
+        }else{
+            alert("Can only move to neighboring areas.");
+        }
+    }
 }

@@ -43,26 +43,31 @@ const tokenService = {};
         };
     };*/
 
-    c.canMoveToken = function(tokenId, newLocationId){
+    c.canMoveToken = function(tokenId, newLocation){
         // TODO kesken
-        console.assert(newLocationId !== undefined);
+        console.assert(newLocation instanceof countryService.Country);
         const token = c.tokens.find(x => x.id === tokenId);
         console.assert(token !== undefined);
-        const currentLocationId = token.location;
-        console.assert(currentLocationId !== undefined);
-        return countryService.areNeighbors(currentLocationId, newLocationId);
+        const currentLocation = token.location;
+        console.assert(currentLocation !== undefined);
+        return countryService.areNeighbors(currentLocation, newLocation);
     };
 
     // TODO: eikö voisi ottaa token-objectin eikä id:tä?
-    c.moveToken = function(tokenId, newLocationId){
-        console.assert(newLocationId !== undefined);
+    c.moveToken = function(tokenId, newLocation){
+        console.assert(newLocation instanceof countryService.Country);
         const token = c.tokens.find(x => x.id === tokenId);
-        console.assert(token !== undefined);
-        const currentLocationId = token.location;
-        console.assert(currentLocationId !== undefined);
-        token.location = newLocationId;
-        countryService.updateOwner(countryService.getCountryById(currentLocationId));
-        countryService.updateOwner(countryService.getCountryById(newLocationId));
+        console.assert(token !== undefined && token !== null);
+        const currentLocation = token.location;
+        console.assert(currentLocation instanceof countryService.Country);
+        token.location = newLocation;
+        countryService.updateOwner(currentLocation);
+        countryService.updateOwner(newLocation);
+        dispatchCustomEvent("tokenMoved", {
+            token: token,
+            originalLocation: currentLocation,
+            newLocation: newLocation
+        });
         /* TODO mihin tätä tarvitaan?
         const moveTokenEvent = new CustomEvent("moveToken", {
             detail: {

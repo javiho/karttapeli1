@@ -105,7 +105,18 @@ const countryService = {};
         return map;
     };
 
-    c.areNeighbors = function(country1Id, country2Id){
+    c.areNeighbors = function(country1, country2){
+        console.assert(country1 instanceof c.Country);
+        console.assert(country2 instanceof c.Country);
+        const country1NeighborTo2 = country1.neighbors.includes(country2);
+        const country2NeighborTo1 = country2.neighbors.includes(country1);
+        console.assert(country1NeighborTo2 === country2NeighborTo1,
+            "Neighborship should be a two-way relationship.");
+        return country1NeighborTo2;
+    };
+    /*c.areNeighbors = function(country1Id, country2Id){
+        console.assert(typeof country1Id === "number");
+        console.assert(typeof country2Id === "number");
         const country1 = c.getCountryById(country1Id);
         const country2 = c.getCountryById(country2Id);
         console.assert(country1 !== undefined && country2 !== undefined);
@@ -114,7 +125,7 @@ const countryService = {};
         console.assert(country1NeighborTo2 === country2NeighborTo1,
             "Neighborship should be a two-way relationship.");
         return country1NeighborTo2;
-    };
+    };*/
 
     c.getCountriesByOwner = function(owner){
         console.assert(owner instanceof playerService.Player);
