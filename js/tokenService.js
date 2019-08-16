@@ -82,10 +82,13 @@ const tokenService = {};
         Returns an object which describes the result of the battle.
      */
     c.resolveBattle = function(attacker, defender){
+        console.assert(attacker instanceof c.Token && defender instanceof c.Token);
         const random = Math.random();
+        //console.log("random:", random);
         const result = {attacker: attacker, defender: defender};
         if(random < 0.5){
             // Attacker succeeded
+            //console.log("Attacker succeeded");
             result.winner = attacker;
             result.loser = defender;
             if(attacker.hasStrength){
@@ -96,6 +99,7 @@ const tokenService = {};
             }
         }else{
             // Defender succeeded
+            //console.log("Defender succeeded");
             result.winner = defender;
             result.loser = attacker;
             if(defender.hasStrength){
@@ -141,7 +145,7 @@ const tokenService = {};
         c.tokens = removeFromArray(c.tokens, token);
         console.assert(c.tokens.length < oldTokensCount);
         console.log("tokens after removal:", c.tokens);
-        countryService.updateOwner(countryService.getCountryById(token.location));
+        countryService.updateOwner(token.location);
         dispatchCustomEvent("tokenRemoved", {token: token});
     };
 

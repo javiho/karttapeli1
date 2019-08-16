@@ -137,6 +137,7 @@ const countryService = {};
     };
 
     c.getCountryById = function(countryId){
+        console.assert(typeof countryId === "number");
         const country = c.countries.find(element => element.id === countryId);
         console.assert(country !== undefined, "countryId:", countryId);
         return country;

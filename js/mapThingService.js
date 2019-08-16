@@ -22,4 +22,18 @@ c.addMapThing = function(geoCountry, modelObject){
     return newMapThing;
 };
 
+c.removeMapThing = function(mapThing){
+    const length = c.mapThings.length;
+    c.mapThings = removeFromArray(c.mapThings, mapThing);
+    const newLength = c.mapThings.length;
+    console.assert(newLength === length - 1);
+};
+
+c.getMapThingByToken = function(token) {
+    console.assert(token instanceof tokenService.Token);
+    const mapThing = c.mapThings.find(x => x.modelObject === token);
+    console.assert(mapThing !== undefined);
+    return mapThing;
+};
+
 })(mapThingService);

@@ -237,6 +237,9 @@ c.updateTokens = function(){
         .attr("r", 10)
         .attr("stroke-width", 2); // Not visible if stroke attribute is empty.;
     selection
+        .attr("data-token-id", function(d){
+            return d.modelObject.id; // TODO: on tarkoitus olla yksi entry ja eri jokaisella
+        })
         .attr("cx", function(d) {
             //const centroid = d.centroid;
             const coords = d.coordinates;
@@ -274,6 +277,7 @@ c.updateTokens = function(){
                 return "5,5";
             }
         });
+    selection.exit().remove();
     //drawInCorrectOrder();
 };
 
@@ -317,6 +321,13 @@ c.addMapThing = function(mapThingModelObject, country){
     console.assert(geoCountry instanceof geoCountryService.GeoCountry);
     const mapThing = mapThingService.addMapThing(geoCountry, mapThingModelObject);
     c._addThingOnCountry(geoCountry, mapThing);
+};
+
+c.removeMapThing = function(mapThing){
+    console.assert(mapThing instanceof mapThingService.MapThing);
+    c._removeThingFromCountry(mapThing.geoCountry, mapThing);
+    mapThingService.removeMapThing(mapThing);
+    c.updateTokens();
 };
 
 c.moveThingFromCountryToAnother = function(mapThing, fromGeoCountry, toGeoCountry){

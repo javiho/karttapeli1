@@ -7,7 +7,10 @@ renderer.initializeMap(function(){
     document.addEventListener("click", universalClickHandler);
     document.addEventListener("countryOwnerChanged", onCountryOwnerChanged);
     document.addEventListener("tokenMoved", onTokenMoved);
+    document.addEventListener("tokenRemoved", onTokenRemoved);
+    document.addEventListener("battleOccurred", onBattleOccurred);
 
+    initializeKeyPressMonitoring();
     playerService.initializePlayerData();
     initializeInitialPlayerPresences();
     renderer.updateTokens();
@@ -50,19 +53,28 @@ function universalClickHandler(event){
             }
         }else if(datum instanceof mapThingService.MapThing){
             if(datum.modelObject instanceof tokenService.Token){
-                // TODO: jos laitetaan datumiksi objecti ja luetaan datum ja verrataan
-                // niitä === -operaattorilla, onko sama?
-                const clickedToken = datum.modelObject;
-                const isAnyTokenSelected = selectedTokenMTs.length > 0;
-                const isThisTokenSelected = selectedTokenMTs.find(
-                    x => clickedToken.id === x.modelObject.id) !== undefined;
-                doSelectTokenAction(datum);
+                if(aKeyPressed){
+                    // TODO: jos laitetaan datumiksi objecti ja luetaan datum ja verrataan
+                    // niitä === -operaattorilla, onko sama?
+                    const clickedToken = datum.modelObject;
+                    const isAnyTokenSelected = selectedTokenMTs.length > 0;
+                    const isThisTokenSelected = selectedTokenMTs.find(
+                        x => clickedToken.id === x.modelObject.id) !== undefined;
+                    if(!isThisTokenSelected && isAnyTokenSelected){
+                        doTokenAttackAction(datum);
+                    }
+                }else{
+                    doSelectTokenAction(datum);
+                }
             }else{
                 console.assert(false, "For now, this should not happen.");
             }
         }
     }
 }
+
+// TODO: sen sijaan että lisätään ja poistetaan joka kerta erikseen mapThing, yksinkertaisempaa olisi
+// olla funktio joka katsoo tokeneiden datasta, mitä muutoksia on tapahtunut, ja päivittää mapThingDataa.
 
 function onTokenCreated(event){
     const token = event.detail.token;
@@ -71,13 +83,20 @@ function onTokenCreated(event){
     renderer.addMapThing(token, country);
 }
 
+function onTokenRemoved(event){
+    const token = event.detail.token;
+    console.assert(token instanceof tokenService.Token);
+    const mapThing = mapThingService.getMapThingByToken(token);
+    renderer.removeMapThing(mapThing);
+}
+
 function onCountryOwnerChanged(event){
-    console.log("onCountryOwnerChanged called:", event);
+    //console.log("onCountryOwnerChanged called:", event);
     renderer.updateCountryColors();
 }
 
 function onTokenMoved(event){
-    console.log("tokenMoved called:", event);
+    //console.log("tokenMoved called:", event);
     const token = event.detail.token;
     const originalLocation = event.detail.originalLocation;
     const newLocation = event.detail.newLocation;
@@ -89,6 +108,50 @@ function onTokenMoved(event){
     const mapThing = mapThingService.mapThings.find(x => x.modelObject === token);
     renderer.moveThingFromCountryToAnother(mapThing, originalGeoCountry, newGeoCountry);
     renderer.updateTokens();
+}
+
+function onBattleOccurred(event){
+    // TODO animointi pitäisi laittaa renderöijälle.
+    console.log("Battle occurred!");
+    const d = event.detail;
+    console.assert(d.attacker !== undefined && d.defender !== undefined && d.dead !== undefined,
+        d.attacker, d.defender, d.dead);
+    // TODO onko muka data-attribuutteja?
+    const attackerSelection = renderer.g.select(".token[data-token-id=" + d.attacker.id + "]");
+    const defenderSelection = renderer.g.select(".token[data-token-id=" + d.defender.id + "]");
+    const attackerDatum = attackerSelection.datum();
+    const defenderDatum = defenderSelection.datum();
+    console.assert(attackerDatum instanceof mapThingService.MapThing);
+    console.assert(defenderDatum instanceof mapThingService.MapThing);
+    if(d.dead === d.attacker){
+        console.log("Attacker will die");
+        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        tokenService.removeToken(attackerSelection.datum().modelObject);
+        renderer.updateTokens();
+        //updateTokenStackNumbers();
+        // Animate also defender counter-attack.
+        // TODO: transitiot voi laittaa d3:lla jonoon jotenkin.
+        /*animateTokenAttack(attackerSelection, function(selection1){
+            animateTokenDeath(selection1, function(selection2){
+                tokenService.removeToken(selection2.datum().token);
+                //console.log("token removed!");
+                updateToppingCircles();
+                updateTokenStackNumbers(); // TODO otettava käyttöön myöhemmin?
+            });
+        });*/
+        //animateTokenAttack(defenderSelection);
+    }else if(d.dead === d.defender){
+        console.log("Defender will die");
+        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        tokenService.removeToken(defenderSelection.datum().modelObject);
+        //console.log("defender token removed!");
+        renderer.updateTokens();
+        // updateTokenStackNumbers(); // TODO otettava käyttöön myöhemmin?
+    }else{
+        // No one died
+        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        renderer.updateTokens();
+    }
 }
 
 ///////////////////// Actions //////////////////////
@@ -121,5 +184,22 @@ function doMoveTokenAction(countryId){
         }else{
             alert("Can only move to neighboring areas.");
         }
+    }
+}
+
+function doTokenAttackAction(mapThing){
+    console.assert(mapThing instanceof mapThingService.MapThing);
+    const attacker = selectedTokenMTs[0].modelObject;
+    const defender = mapThing.modelObject;
+    console.assert(attacker !== undefined && defender !== undefined);
+    if(attacker.hasStrength === false){
+        console.log("No strength to attack");
+    }else if(attacker.owner === defender.owner){
+        console.log("Both tokens belong to same player. No battle.");
+    }else{
+        const battleResult = tokenService.resolveBattle(attacker, defender);
+        //console.log("battle result:", battleResult);
+        // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
+        tokenService.executeBattle(battleResult);
     }
 }
