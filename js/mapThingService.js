@@ -36,4 +36,16 @@ c.getMapThingByToken = function(token) {
     return mapThing;
 };
 
+c.getTokenVisualState = function(mapThing){
+    console.assert(mapThing instanceof c.MapThing);
+    const token = mapThing.modelObject;
+    if(token.isDead){
+        return tokenService.tokenStates.dead;
+    }else if(!token.hasStrength){
+        return tokenService.tokenStates.noStrength;
+    }else{
+        return tokenService.tokenStates.default;
+    }
+}
+
 })(mapThingService);

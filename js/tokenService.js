@@ -8,6 +8,12 @@ const tokenService = {};
     c.tokenPrice = 2;
     //c.countryIdToTokenIds = null;
 
+    c.tokenStates = {
+        default: "defaultState",
+        dead: "dead",
+        noStrength: "noStrength"
+    };
+
     c.initialize = function(){
         /*c.countryIdToTokenIds = new Map();
         countryIds.forEach(function(element){

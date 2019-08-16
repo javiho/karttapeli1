@@ -13,6 +13,7 @@ renderer.initializeMap(function(){
     initializeKeyPressMonitoring();
     playerService.initializePlayerData();
     initializeInitialPlayerPresences();
+    renderer.generateAndAddPatterns(playerService.players);
     renderer.updateTokens();
     onCountryOwnerChanged(null); // Update all country colors to set the initial colors.
 });

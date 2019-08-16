@@ -101,6 +101,7 @@ c.initializeMap = function(callback) {
             .attr("stroke-width", "1");
 
         c.g = g;
+        c.svg = svg;
         c.projection = projection;
         // pathDataArray is supposed to be used instead of topology in _initializeCentroidData and
         // _initializeCountryData, despite parameter names.
@@ -161,6 +162,39 @@ c._initializeCentroidData = function(pathDataArray){
             return d3.geo.centroid(element); // "Returns the spherical centroid"
         });
     return centroidData;
+};
+
+/*
+    Pre-condition: players is an array of Player objects.
+ */
+c.generateAndAddPatterns = function(players){
+    const statesToPolygonPoints = new Map();
+    statesToPolygonPoints.set(tokenService.tokenStates.noStrength, "2,2 8,2 8,8 2,8");
+    statesToPolygonPoints.set(tokenService.tokenStates.dead, "0,0 2,5 0,10 5,8 10,10 8,5 10,0 5,2");
+    statesToPolygonPoints.set(tokenService.tokenStates.default, "");
+    const backgroundPolygonPoints = "0,0 10,0 10,10 0,10";
+    const defs = c.svg.select("defs");
+    players.forEach(function(player){
+        for(let [state, statePolygonPoints] of statesToPolygonPoints.entries()){
+            const patternId = c._getTokenPatternId(player, state);
+            const pattern = defs.append("pattern")
+                .attr("id", patternId)
+                .attr("viewBox", "0,0,10,10")
+                .attr("width", "100%")
+                .attr("height", "100%");
+            pattern.append("polygon")
+                .attr("points", backgroundPolygonPoints).attr("fill", player.color);
+            pattern.append("polygon")
+                .attr("points", statePolygonPoints);
+        }
+    });
+};
+
+/*
+    player: Player, state: string
+ */
+c._getTokenPatternId = function(player, state){
+    return player.id + "-" + state;
 };
 
 // TODO Ei käytössä
@@ -276,6 +310,11 @@ c.updateTokens = function(){
             }else{
                 return "5,5";
             }
+        })
+        .style("fill", function(d){
+            console.assert(d.modelObject instanceof tokenService.Token);
+            return "url(#"+c._getTokenPatternId(d.modelObject.owner, mapThingService.getTokenVisualState(d))+")";
+            //return "url(#star)";//d.token.owner.color;
         });
     selection.exit().remove();
     //drawInCorrectOrder();
