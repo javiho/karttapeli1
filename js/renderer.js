@@ -14,6 +14,8 @@ c.countryData = null;
 // Following kind of objects: { coordinates (lon and lat): [number, number], country: Country }
 //c.mapThings = null;
 
+c.battleLines = [];
+
 // Constants
 c.centroidFill = null;
 c.ownerlessCountryFill = "#000000";
@@ -347,8 +349,73 @@ c.updateCountryColors = function(){
     });
 };
 
+c.updateBattleLines = function(){
+    let selection = c.g.selectAll(".battle-line").data(c.battleLines);
+    selection
+        .enter()
+        .append("line")
+        .classed({"battle-line": true})
+        .style("stroke", "orange")
+        .style("stroke-width", "10")
+        .transition()
+        .each("end", function(d){
+            console.log("Battle line transition ended");
+            // Remove the data of this battle line from battleLines.
+
+            const filteredBattleLines = c.battleLines.filter(function(battleLine){
+                return !(
+                    battleLine.attacker === d.attacker
+                    && battleLine.defender === d.defender);
+            });
+            c.battleLines = filteredBattleLines;
+            c.updateBattleLines();
+        })
+        .duration(1500)
+        .style("stroke-width", "2");
+    // Get the positions of token circles (taking account the translation) and
+    // change the line's position to be between them.
+    selection
+        .attr("x1", function(d){
+            return parseFloat(c._getTokenSelection(d.attacker).attr("cx"));
+        }).attr("y1", function(d){
+            return parseFloat(c._getTokenSelection(d.attacker).attr("cy"));
+        }).attr("x2", function(d){
+            return parseFloat(c._getTokenSelection(d.defender).attr("cx"));
+        }).attr("y2", function(d){
+            return parseFloat(c._getTokenSelection(d.defender).attr("cy"));
+        });
+    selection.exit().remove();
+};
+
+/* Token -> d3 selection of the token. */
+c._getTokenSelection = function(token){
+    console.assert(token instanceof tokenService.Token, "Not token, but this:", token);
+    const selection = c.g.select(".token[data-token-id=" + token.id + "]");
+    //const selection = c.g.select(".token");
+    if(selection === null || selection === undefined) console.warn("token selection:", selection);
+    console.log("selection", selection);
+    return selection;
+};
+
 c._getCentroidData = function(){
     return c.countryData.map(e => e.centroid);
+};
+
+///////////////////// Animations //////////////////////////////
+
+c.animateBattleLine = function(attackerDatum, defenderDatum){
+    //console.assert(attackerDatum.hasOwnProperty("token"));
+    //console.assert(defenderDatum.hasOwnProperty("token"));
+    //console.assert(attackerDatum instanceof mapThingService.MapThing);
+    //console.assert(defenderDatum instanceof mapThingService.MapThing);
+    console.assert(attackerDatum.modelObject instanceof tokenService.Token);
+    console.assert(defenderDatum.modelObject instanceof tokenService.Token);
+    c.battleLines.push({
+        attacker: attackerDatum.modelObject,
+        defender: defenderDatum.modelObject,
+        isBattleLine: true
+    });
+    c.updateBattleLines();
 };
 
 ///////////////////// Objects to and from countries ///////////

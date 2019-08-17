@@ -126,7 +126,7 @@ function onBattleOccurred(event){
     console.assert(defenderDatum instanceof mapThingService.MapThing);
     if(d.dead === d.attacker){
         console.log("Attacker will die");
-        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        renderer.animateBattleLine(attackerDatum, defenderDatum);
         tokenService.removeToken(attackerSelection.datum().modelObject);
         renderer.updateTokens();
         //updateTokenStackNumbers();
@@ -143,14 +143,14 @@ function onBattleOccurred(event){
         //animateTokenAttack(defenderSelection);
     }else if(d.dead === d.defender){
         console.log("Defender will die");
-        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        renderer.animateBattleLine(attackerDatum, defenderDatum);
         tokenService.removeToken(defenderSelection.datum().modelObject);
-        //console.log("defender token removed!");
         renderer.updateTokens();
+        //console.log("defender token removed!");
         // updateTokenStackNumbers(); // TODO otettava käyttöön myöhemmin?
     }else{
         // No one died
-        //animateBattleLine(attackerDatum, defenderDatum); // TODO otettava käyttöön!
+        renderer.animateBattleLine(attackerDatum, defenderDatum);
         renderer.updateTokens();
     }
 }
