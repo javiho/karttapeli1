@@ -9,13 +9,21 @@ renderer.initializeMap(function(){
     document.addEventListener("tokenMoved", onTokenMoved);
     document.addEventListener("tokenRemoved", onTokenRemoved);
     document.addEventListener("battleOccurred", onBattleOccurred);
+    document.addEventListener("turnChanged", onTurnChanged);
+    document.addEventListener("phaseChanged", onPhaseChanged);
+    document.addEventListener("currentPlayerChanged", onCurrentPlayerChanged);
 
     initializeKeyPressMonitoring();
     playerService.initializePlayerData();
+    turnService.initializeTurnData();
     initializeInitialPlayerPresences();
     renderer.generateAndAddPatterns(playerService.players);
     renderer.updateTokens();
     onCountryOwnerChanged(null); // Update all country colors to set the initial colors.
+
+    dispatchCustomEvent("phaseChanged");
+    dispatchCustomEvent("currentPlayerChanged");
+    dispatchCustomEvent("turnChanged");
 });
 
 function initializeInitialPlayerPresences(){
@@ -35,6 +43,7 @@ function initializeInitialPlayerPresences(){
 //////////////////// Listeners ///////////////////
 
 function universalClickHandler(event){
+    buttonClickHandler(event);
     const target = event.target;
     const targetD3 = d3.select(target);
     const datum = targetD3.datum();
@@ -62,7 +71,11 @@ function universalClickHandler(event){
                     const isThisTokenSelected = selectedTokenMTs.find(
                         x => clickedToken.id === x.modelObject.id) !== undefined;
                     if(!isThisTokenSelected && isAnyTokenSelected){
-                        doTokenAttackAction(datum);
+                        if(turnService.currentPhase === turnService.Phases.battle) {
+                            doTokenAttackAction(datum);
+                        }else{
+                            console.log("Can only attack in battle phase.");
+                        }
                     }
                 }else{
                     doSelectTokenAction(datum);
@@ -71,6 +84,16 @@ function universalClickHandler(event){
                 console.assert(false, "For now, this should not happen.");
             }
         }
+    }
+}
+
+function buttonClickHandler(event){
+    if(event.target.id === "next-player-button"){
+        turnService.advanceToNextPlayer();
+    }else if(event.target.id === "next-phase-button"){
+        turnService.advanceToNextPhase();
+    }else if(event.target.id === "next-region-button"){
+        console.log("Nothing here yet");
     }
 }
 
@@ -155,6 +178,33 @@ function onBattleOccurred(event){
     }
 }
 
+function onTurnChanged(){
+    $('#current-turn-info').text(""+turnService.currentTurn);
+    const deadTokens = tokenService.tokens.filter(token => token.isDead === true);
+    deadTokens.forEach(function(token){
+        tokenService.removeToken(token);
+        renderer.removeMapThing(mapThingService.getMapThingByToken(token));
+    });
+    tokenService.returnStrengthToTokens();
+    renderer.updateTokens();
+}
+
+function onPhaseChanged(){
+    $('#current-phase-info').text(turnService.currentPhase);
+    // Now done automatically, but in the future could require user action, so initiate it in this module.
+    if(turnService.currentPhase === turnService.Phases.taxation){
+        doTaxationAction();
+    }
+}
+
+function onCurrentPlayerChanged(){
+    $('#current-player-info').text(turnService.currentPlayer.name);
+    if(turnService.currentPhase === turnService.Phases.taxation){
+        doTaxationAction();
+    }
+    guiUpdater.updatePlayerInfo();
+}
+
 ///////////////////// Actions //////////////////////
 
 function doSelectTokenAction(datum){
@@ -203,4 +253,18 @@ function doTokenAttackAction(mapThing){
         // TODO: joko tässä tai muualla toteutettava lopputuloksen vaatimat asiat
         tokenService.executeBattle(battleResult);
     }
+}
+
+function doTaxationAction(){
+    const currentPlayer = turnService.currentPlayer;
+    const countriesOfCurrentPlayer = countryService.getCountriesByOwner(currentPlayer);
+    const untaxedCountries = countriesOfCurrentPlayer.filter(country => country.taxed === false);
+    const taxedMoney = untaxedCountries.length;
+    console.assert(taxedMoney >= 0 && typeof taxedMoney === "number");
+    console.assert(typeof currentPlayer.money === "number");
+    currentPlayer.money += taxedMoney;
+    untaxedCountries.forEach(function(country){
+        country.taxed = true;
+    });
+    guiUpdater.updatePlayerInfo();
 }
