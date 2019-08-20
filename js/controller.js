@@ -56,7 +56,14 @@ function universalClickHandler(event){
                 }else{
                     console.log("Can only move in the maneuver phase!");
                 }
-            }else{
+            }else if(event.ctrlKey) {
+                if(turnService.currentPhase === turnService.Phases.taxation){
+                    doPurchaseTokenAction(countryId);
+                }else{
+                    console.log("Can only pucrchase in the taxation phase!");
+                }
+            }
+            else{
                 selectedTokenMTs = [];
                 renderer.updateTokens();
                 console.log("Nothing here yet");
@@ -268,3 +275,23 @@ function doTaxationAction(){
     });
     guiUpdater.updatePlayerInfo();
 }
+
+function doPurchaseTokenAction(countryId){
+    //console.assert(country instanceof countryService.Country);
+    const country = countryService.getCountryById(countryId);
+    const currentPlayer = turnService.currentPlayer;
+    const playerOwnsCountry = country.owner === currentPlayer;
+    const playerHasMoney = currentPlayer.money >= tokenService.tokenPrice;
+    if(!playerOwnsCountry){
+        alert("Can only buy tokens in own territory.");
+    }else if(!playerHasMoney){
+        alert("Not enough money. Must have "+tokenService.tokenPrice+".");
+    }else{
+        currentPlayer.money -= tokenService.tokenPrice;
+        tokenService.addToken(country, turnService.currentPlayer);
+        renderer.updateTokens();
+        guiUpdater.updatePlayerInfo();
+    }
+}
+
+////////////////////////// Helpers /////////////////////
